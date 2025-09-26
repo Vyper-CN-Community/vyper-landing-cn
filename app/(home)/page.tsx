@@ -1,3 +1,5 @@
+import HomeModule from "@/modules/(home)";
+
 export default function Home() {
-  return <div>vyper</div>;
+  return <HomeModule />;
 }
