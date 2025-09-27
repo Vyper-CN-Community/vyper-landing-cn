@@ -29,7 +29,7 @@ const routes = [
 
 export default function LayoutHeader() {
   return (
-    <header className="sticky h-16 border-b border-dashed">
+    <header className="sticky top-0 h-16 border-b border-dashed">
       <MaxWidthWrapper className="flex justify-between">
         <h1 className="flex items-center justify-center gap-4 py-2">
           <Link href={"/"}>
