@@ -2,7 +2,7 @@ import Link from "next/link";
 
 export default function HeroSection() {
   return (
-    <div className="m-auto mt-24 flex flex-1 flex-col gap-12">
+    <div className="m-auto mt-32 flex flex-1 flex-col gap-24">
       <h2 className="flex flex-col items-center gap-2 text-7xl">
         <span className="font-semibold"> Vyper </span>
         <span>构建安全可靠的智能合约</span>
