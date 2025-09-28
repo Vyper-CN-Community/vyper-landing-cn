@@ -9,6 +9,7 @@ export const CodeHighlight: FC<
 > = ({ children, lang, ...props }) => {
   return (
     <div {...props}>
+      <h4 className="text-lg">{lang}</h4>
       <CodeBlock lang={lang}>{String(children)}</CodeBlock>
     </div>
   );
@@ -20,15 +21,15 @@ type Props = {
 };
 
 async function CodeBlock(props: Props) {
-  const out = await codeToHtml(props.children, {
+  const out = await codeToHtml(props.children.replace(/^\n/, ""), {
     lang: props.lang,
     theme: "github-dark",
   });
 
   return (
     <div
+      className="[&_pre]:rounded-md [&_pre]:p-4"
       dangerouslySetInnerHTML={{ __html: out }}
-      className="overflow-hidden rounded-md"
     />
   );
 }

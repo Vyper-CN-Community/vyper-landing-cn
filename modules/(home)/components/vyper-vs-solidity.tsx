@@ -17,34 +17,34 @@ export default function VyperVsSolidity() {
       <main className="flex gap-4">
         <CodeHighlight className="flex-1" lang="vyper">
           {`
-  @external
-  def purchase():
-      assert msg.value == 2 * self.value
-      assert self.state == State.LOCKED
-      
-      self.state = State.INACTIVE
-      self.buyer = msg.sender
-      self.value = msg.value
+@external
+def purchase():
+    assert msg.value == 2 * self.value
+    assert self.state == State.LOCKED
+    
+    self.state = State.INACTIVE
+    self.buyer = msg.sender
+    self.value = msg.value
         `}
         </CodeHighlight>
 
         <CodeHighlight className="flex-1" lang="solidity">
           {`
-    modifier condition(bool condition_) {
-        require(condition_);
-        _;
-    }
-    modifier onlyBuyer() { ... }
-    modifier inState(State state_) { ... }
+modifier condition(bool condition_) {
+    require(condition_);
+    _;
+}
+modifier onlyBuyer() { ... }
+modifier inState(State state_) { ... }
 
-    function purchase() external payable
-        inState(State.Locked)
-        condition(msg.value == (2 * value))
-    {
-        state = State.Inactive;
-        buyer = payable(msg.sender);
-        value = msg.value;
-    }
+function purchase() external payable
+    inState(State.Locked)
+    condition(msg.value == (2 * value))
+{
+    state = State.Inactive;
+    buyer = payable(msg.sender);
+    value = msg.value;
+}
         `}
         </CodeHighlight>
       </main>
