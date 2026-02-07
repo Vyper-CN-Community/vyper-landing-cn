@@ -9,7 +9,7 @@ export const CodeHighlight: FC<{
 }> = async ({ code, lang, className }) => {
   const html = await codeToHtml(code, {
     lang,
-    theme: 'github-dark',
+    theme: 'catppuccin-mocha',
   })
 
   return (
