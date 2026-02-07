@@ -14,7 +14,7 @@
     "lint:fix": "biome check --max-diagnostics=100 --write .",
     "prepare": "husky",
     "commit": "git-cz",
-    "qwer": "czg ai"
+    "qwer": "git-cz"
   },
   "dependencies": {
     "@radix-ui/react-dropdown-menu": "^2.1.16",
