@@ -7,7 +7,7 @@ import { routes } from './constant'
 
 export const Header: FC<ComponentProps<'header'>> = () => {
   return (
-    <header className="sticky top-0 h-16 border-b border-dashed bg-white dark:bg-black">
+    <header className="sticky top-0 h-16 border-b border-dashed bg-white dark:bg-background">
       <MaxWidthWrapper className="flex justify-between">
         <h1 className="flex items-center justify-center gap-4 py-2">
           <Link href={'/'}>
