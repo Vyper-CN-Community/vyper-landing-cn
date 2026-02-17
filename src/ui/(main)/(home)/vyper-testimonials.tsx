@@ -39,7 +39,7 @@ const testimonials: Testimonial[] = [
 
 export const VyperTestimonials: FC = () => {
   return (
-    <section className="px-4 py-20 md:py-28">
+    <section className="border-border border-t px-4 py-20 md:py-28">
       <div className="mx-auto max-w-6xl">
         <motion.div
           initial={{ opacity: 0, y: 18 }}

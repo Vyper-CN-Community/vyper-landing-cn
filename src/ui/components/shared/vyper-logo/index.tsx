@@ -1,7 +1,20 @@
-import type { ComponentProps, FC } from 'react'
-import Image from 'next/image'
+import Image, { type ImageProps } from 'next/image'
+import { cn } from '@/lib/utils/shadcn'
 import vyperColorLogo from './vyper-color-logo.svg'
 
-export const VyperLogo: FC<ComponentProps<'div'>> = () => {
-  return <Image src={vyperColorLogo} alt="vyper logo" height={32} width={32} className="m-auto" />
+export const VyperLogo = ({
+  size = 32,
+  className,
+  ...props
+}: Omit<ImageProps, 'src' | 'alt' | 'width' | 'height'> & { size?: number }) => {
+  return (
+    <Image
+      src={vyperColorLogo}
+      alt="Vyper logo"
+      height={size}
+      width={size}
+      className={cn('m-auto', className)}
+      {...props}
+    />
+  )
 }

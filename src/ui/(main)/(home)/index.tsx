@@ -10,7 +10,6 @@ export const HomePage = async (props: ComponentProps<'div'>) => {
   return (
     <div className="flex flex-1 flex-col">
       <HeroSection />
-      <div className="border-border border-t" />
       <VyperTestimonials />
       <VyperVsSolidity />
       <VyperSecurityAduit />

@@ -4,10 +4,10 @@ import type { ComponentProps, FC } from 'react'
 import { motion } from 'motion/react'
 import Image, { type StaticImageData } from 'next/image'
 import Link from 'next/link'
-import anatomistAvatar from './assets/anatomist.jpg'
-import chainsecurityLogo from './assets/chainsecurity.svg'
-import ottersecLogo from './assets/ottersec.svg'
-import statemindAvatar from './assets/statemind.jpg'
+import anatomistAvatar from './assets/audits/anatomist.jpg'
+import chainsecurityLogo from './assets/audits/chainsecurity.svg'
+import ottersecLogo from './assets/audits/ottersec.svg'
+import statemindAvatar from './assets/audits/statemind.jpg'
 
 type AuditPartner = {
   name: string

@@ -1,5 +1,5 @@
 import { CodeHighlight } from '@/ui/components/shared/code-highlight'
-import { VyperVsSolidityClient } from './vyper-vs-solidity-client'
+import { VyperVsSolidityClient } from './components/vyper-vs-solidity-client'
 
 const vyperCode = `
 @external
