@@ -1,6 +1,7 @@
 import type { ComponentProps } from 'react'
 import { HeroSection } from './hero-section'
 import { Footer } from './layout/footer'
+import { VyperSecurityAduit } from './vyper-security-audit'
 import { VyperTestimonials } from './vyper-testimonials'
 import { VyperVsSolidity } from './vyper-vs-solidity'
 
@@ -11,6 +12,7 @@ export const HomePage = async (props: ComponentProps<'div'>) => {
       <div className="border-border border-t" />
       <VyperTestimonials />
       <VyperVsSolidity />
+      <VyperSecurityAduit />
       <Footer />
     </div>
   )
