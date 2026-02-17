@@ -1,14 +1,11 @@
 import type { ComponentProps, FC } from 'react'
-import { MaxWidthWrapper } from '../components/shared/max-width-wrapper'
 import { Header } from './(home)/layout/header'
 
 export const MainLayout: FC<ComponentProps<'div'>> = ({ children }) => {
   return (
-    <div className="min-h-screen w-full font-sans">
+    <div className="flex min-h-screen w-full flex-col font-sans">
       <Header />
-      <MaxWidthWrapper className="mx-auto flex w-full max-w-5xl flex-col">
-        {children}
-      </MaxWidthWrapper>
+      <main className="flex-1">{children}</main>
     </div>
   )
 }

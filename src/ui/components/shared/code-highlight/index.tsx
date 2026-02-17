@@ -9,13 +9,17 @@ export const CodeHighlight: FC<{
 }> = async ({ code, lang, className }) => {
   const html = await codeToHtml(code, {
     lang,
-    theme: 'catppuccin-mocha',
+    themes: {
+      light: 'github-light',
+      dark: 'github-dark',
+    },
+    defaultColor: false,
   })
 
   return (
     <div
       className={cn(
-        '[&_pre]:overflow-x-auto [&_pre]:rounded-md [&_pre]:bg-[#1e1e1e]! [&_pre]:p-4',
+        '[&_pre]:overflow-x-auto [&_pre]:rounded-lg [&_pre]:border [&_pre]:border-border [&_pre]:bg-card! [&_pre]:p-4 [&_pre]:font-mono [&_pre]:text-[13px] [&_pre]:leading-relaxed',
         className,
       )}
       dangerouslySetInnerHTML={{ __html: html }}

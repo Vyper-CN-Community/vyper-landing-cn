@@ -111,26 +111,22 @@ export const VyperVsSolidity = async () => {
       title: '清晰度：更少的代码，更少的歧义',
       description:
         'Vyper 的设计理念并非仅限于理论。了解其对清晰度、安全性和效率的关注如何在实践中转化为更简洁、更安全、更高效的代码。',
-      vyperCode: <CodeHighlight code={vyperCode} lang="python" className="text-sm" />,
-      solidityCode: <CodeHighlight code={solidityCode} lang="solidity" className="text-sm" />,
+      vyperCode: <CodeHighlight code={vyperCode} lang="python" />,
+      solidityCode: <CodeHighlight code={solidityCode} lang="solidity" />,
     },
     {
       title: '安全性：内置保护',
       description:
         '以下是每种语言处理简单重入锁的方式。Vyper 的内置装饰器使安全性变得简单明了。无需导入，无需继承，只有清晰、简洁的保护。',
-      vyperCode: <CodeHighlight code={vyperSecurityCode} lang="python" className="text-sm" />,
-      solidityCode: (
-        <CodeHighlight code={soliditySecurityCode} lang="solidity" className="text-sm" />
-      ),
+      vyperCode: <CodeHighlight code={vyperSecurityCode} lang="python" />,
+      solidityCode: <CodeHighlight code={soliditySecurityCode} lang="solidity" />,
     },
     {
       title: '效率：简单即高效',
       description:
-        '通过保持可读性和可维护性的代码实现顶级 Gas 性能。此基准测试显示 Vyper 以显著更低的代码复杂度提供了具有竞争力的 Gas 使用率。一个可读的函数对比多个复杂的函数意味着更小的审计面、更低的风险和更快的开发速度。',
-      vyperCode: <CodeHighlight code={vyperEfficiencyCode} lang="python" className="text-sm" />,
-      solidityCode: (
-        <CodeHighlight code={solidityEfficiencyCode} lang="solidity" className="text-sm" />
-      ),
+        '通过保持可读性和可维护性的代码实现顶级 Gas 性能。此基准测试显示 Vyper 以显著更低的代码复杂度提供了具有竞争力的 Gas 使用率。',
+      vyperCode: <CodeHighlight code={vyperEfficiencyCode} lang="python" />,
+      solidityCode: <CodeHighlight code={solidityEfficiencyCode} lang="solidity" />,
     },
   ]
 
