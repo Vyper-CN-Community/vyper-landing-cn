@@ -1,5 +1,6 @@
 'use client'
 
+import { AnimatePresence, motion } from 'motion/react'
 import { type FC, type ReactNode, useState } from 'react'
 import { cn } from '@/lib/utils/shadcn'
 
@@ -32,36 +33,53 @@ export const VyperVsSolidityClient: FC<{
                 type="button"
                 onClick={() => setActiveIndex(index)}
                 className={cn(
-                  'rounded-lg px-4 py-3 text-left text-sm transition-colors',
+                  'relative rounded-lg px-4 py-3 text-left text-sm transition-colors',
                   index === activeIndex
-                    ? 'bg-accent font-medium text-foreground'
+                    ? 'font-medium text-foreground'
                     : 'text-muted-foreground hover:text-foreground',
                 )}
               >
-                {item.title}
+                {index === activeIndex && (
+                  <motion.div
+                    layoutId="active-tab-bg"
+                    className="absolute inset-0 rounded-lg bg-accent"
+                    transition={{ type: 'spring', duration: 0.4, bounce: 0.15 }}
+                  />
+                )}
+                <span className="relative z-10">{item.title}</span>
               </button>
             ))}
           </div>
 
           <div className="min-w-0 flex-1">
-            <p className="mb-6 text-muted-foreground text-sm leading-relaxed">
-              {activeItem.description}
-            </p>
+            <AnimatePresence mode="wait">
+              <motion.div
+                key={activeIndex}
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -8 }}
+                transition={{ duration: 0.25, ease: 'easeInOut' }}
+              >
+                <p className="mb-6 text-muted-foreground text-sm leading-relaxed">
+                  {activeItem.description}
+                </p>
 
-            <div className="grid gap-4 md:grid-cols-2">
-              <div>
-                <div className="mb-2 font-medium text-muted-foreground text-xs uppercase tracking-wider">
-                  Vyper
+                <div className="grid gap-4 md:grid-cols-2">
+                  <div>
+                    <div className="mb-2 font-medium text-muted-foreground text-xs uppercase tracking-wider">
+                      Vyper
+                    </div>
+                    {activeItem.vyperCode}
+                  </div>
+                  <div>
+                    <div className="mb-2 font-medium text-muted-foreground text-xs uppercase tracking-wider">
+                      Solidity
+                    </div>
+                    {activeItem.solidityCode}
+                  </div>
                 </div>
-                {activeItem.vyperCode}
-              </div>
-              <div>
-                <div className="mb-2 font-medium text-muted-foreground text-xs uppercase tracking-wider">
-                  Solidity
-                </div>
-                {activeItem.solidityCode}
-              </div>
-            </div>
+              </motion.div>
+            </AnimatePresence>
           </div>
         </div>
       </div>
