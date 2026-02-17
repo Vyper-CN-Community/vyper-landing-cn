@@ -7,6 +7,7 @@ import { cn } from '@/lib/utils/shadcn'
 export const VyperVsSolidityClient: FC<{
   items: {
     title: string
+    shortTitle: string
     description: string
     vyperCode: ReactNode
     solidityCode: ReactNode
@@ -17,7 +18,7 @@ export const VyperVsSolidityClient: FC<{
 
   return (
     <section className="px-4 py-20 md:py-28">
-      <div className="mx-auto max-w-5xl">
+      <div className="mx-auto max-w-6xl px-4">
         <div className="mb-4 text-center">
           <h2 className="font-bold text-3xl tracking-tighter md:text-4xl">探索 Vyper 优势</h2>
           <p className="mt-3 text-base text-muted-foreground md:text-lg">
@@ -26,14 +27,14 @@ export const VyperVsSolidityClient: FC<{
         </div>
 
         <div className="mt-12 flex flex-col gap-8 lg:flex-row lg:gap-12">
-          <div className="flex flex-col gap-1 lg:w-72 lg:shrink-0">
+          <div className="flex flex-row gap-1 overflow-x-auto pb-2 [-ms-overflow-style:none] [scrollbar-width:none] lg:w-72 lg:shrink-0 lg:flex-col lg:pb-0 [&::-webkit-scrollbar]:hidden">
             {items.map((item, index) => (
               <button
                 key={index}
                 type="button"
                 onClick={() => setActiveIndex(index)}
                 className={cn(
-                  'relative rounded-lg px-4 py-3 text-left text-sm transition-colors',
+                  'relative shrink-0 whitespace-nowrap rounded-lg px-4 py-3 text-left text-sm transition-colors',
                   index === activeIndex
                     ? 'font-medium text-foreground'
                     : 'text-muted-foreground hover:text-foreground',
@@ -46,7 +47,8 @@ export const VyperVsSolidityClient: FC<{
                     transition={{ type: 'spring', duration: 0.4, bounce: 0.15 }}
                   />
                 )}
-                <span className="relative z-10">{item.title}</span>
+                <span className="relative z-10 md:hidden">{item.shortTitle}</span>
+                <span className="relative z-10 hidden md:inline">{item.title}</span>
               </button>
             ))}
           </div>
@@ -65,13 +67,13 @@ export const VyperVsSolidityClient: FC<{
                 </p>
 
                 <div className="grid gap-4 md:grid-cols-2">
-                  <div>
+                  <div className="min-w-0">
                     <div className="mb-2 font-medium text-muted-foreground text-xs uppercase tracking-wider">
                       Vyper
                     </div>
                     {activeItem.vyperCode}
                   </div>
-                  <div>
+                  <div className="min-w-0">
                     <div className="mb-2 font-medium text-muted-foreground text-xs uppercase tracking-wider">
                       Solidity
                     </div>

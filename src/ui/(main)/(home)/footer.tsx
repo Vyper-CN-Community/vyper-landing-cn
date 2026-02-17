@@ -35,8 +35,8 @@ export const Footer: FC = () => {
   return (
     <footer className="border-border border-t">
       <div className="mx-auto max-w-6xl px-4 py-12 md:px-6 md:py-16">
-        <div className="grid grid-cols-2 gap-8 md:grid-cols-4">
-          <div className="col-span-2 md:col-span-1">
+        <div className="grid grid-cols-1 gap-8 sm:grid-cols-2 md:grid-cols-4">
+          <div className="sm:col-span-2 md:col-span-1">
             <span className="font-bold text-lg tracking-tight">Vyper</span>
             <p className="mt-2 text-muted-foreground text-sm leading-relaxed">
               面向 EVM 的 Pythonic 智能合约语言

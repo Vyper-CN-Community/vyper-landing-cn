@@ -109,6 +109,7 @@ export const VyperVsSolidity = async () => {
   const items = [
     {
       title: '清晰度：更少的代码，更少的歧义',
+      shortTitle: '清晰度',
       description:
         'Vyper 的设计理念并非仅限于理论。了解其对清晰度、安全性和效率的关注如何在实践中转化为更简洁、更安全、更高效的代码。',
       vyperCode: <CodeHighlight code={vyperCode} lang="python" />,
@@ -116,6 +117,7 @@ export const VyperVsSolidity = async () => {
     },
     {
       title: '安全性：内置保护',
+      shortTitle: '安全性',
       description:
         '以下是每种语言处理简单重入锁的方式。Vyper 的内置装饰器使安全性变得简单明了。无需导入，无需继承，只有清晰、简洁的保护。',
       vyperCode: <CodeHighlight code={vyperSecurityCode} lang="python" />,
@@ -123,6 +125,7 @@ export const VyperVsSolidity = async () => {
     },
     {
       title: '效率：简单即高效',
+      shortTitle: '效率',
       description:
         '通过保持可读性和可维护性的代码实现顶级 Gas 性能。此基准测试显示 Vyper 以显著更低的代码复杂度提供了具有竞争力的 Gas 使用率。',
       vyperCode: <CodeHighlight code={vyperEfficiencyCode} lang="python" />,

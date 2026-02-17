@@ -4,7 +4,7 @@ import { FadeIn } from '@/ui/components/shared/fade-in'
 
 export const HeroSection: FC<ComponentProps<'div'>> = () => {
   return (
-    <section className="flex flex-col items-center px-4 pt-24 pb-20 md:pt-32 md:pb-28">
+    <section className="flex flex-col items-center px-4 pt-20 pb-16 md:pt-32 md:pb-28">
       <FadeIn>
         <div className="mb-6 inline-flex items-center rounded-full border border-border bg-card px-3 py-1 text-muted-foreground text-xs">
           Pythonic Smart Contract Language for EVM
@@ -12,7 +12,7 @@ export const HeroSection: FC<ComponentProps<'div'>> = () => {
       </FadeIn>
 
       <FadeIn delay={0.1}>
-        <h1 className="max-w-4xl text-center font-bold text-4xl leading-[1.15] tracking-tighter md:text-6xl lg:text-7xl">
+        <h1 className="max-w-4xl text-center font-bold text-3xl leading-[1.15] tracking-tighter sm:text-4xl md:text-6xl lg:text-7xl">
           <span>用 Vyper 构建</span>
           <br />
           <span className="text-muted-foreground">安全可靠的智能合约</span>
