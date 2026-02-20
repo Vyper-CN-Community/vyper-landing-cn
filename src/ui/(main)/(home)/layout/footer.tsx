@@ -1,5 +1,6 @@
 import type { FC } from 'react'
 import Link from 'next/link'
+import { MaxWidthWrapper } from '@/ui/components/shared/max-width-wrapper'
 
 const footerLinks = [
   {
@@ -34,7 +35,7 @@ const footerLinks = [
 export const Footer: FC = () => {
   return (
     <footer className="border-border border-t">
-      <div className="mx-auto max-w-6xl px-4 py-12 md:px-6 md:py-16">
+      <MaxWidthWrapper className="py-12 md:py-16">
         <div className="grid grid-cols-1 gap-8 sm:grid-cols-2 md:grid-cols-4">
           <div className="sm:col-span-2 md:col-span-1">
             <span className="font-bold text-lg tracking-tight">Vyper</span>
@@ -67,7 +68,7 @@ export const Footer: FC = () => {
             © {new Date().getFullYear()} Vyper. MIT License.
           </p>
         </div>
-      </div>
+      </MaxWidthWrapper>
     </footer>
   )
 }

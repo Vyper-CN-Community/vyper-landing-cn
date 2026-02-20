@@ -3,6 +3,7 @@
 import { AnimatePresence, motion } from 'motion/react'
 import { type FC, type ReactNode, useState } from 'react'
 import { cn } from '@/lib/utils/shadcn'
+import { MaxWidthWrapper } from '@/ui/components/shared/max-width-wrapper'
 
 export const VyperVsSolidityClient: FC<{
   items: {
@@ -17,8 +18,8 @@ export const VyperVsSolidityClient: FC<{
   const activeItem = items[activeIndex]
 
   return (
-    <section className="px-4 py-20 md:py-28">
-      <div className="mx-auto max-w-6xl px-4">
+    <section className="py-20 md:py-28">
+      <MaxWidthWrapper>
         <div className="mb-4 text-center">
           <h2 className="font-bold text-3xl tracking-tighter md:text-4xl">探索 Vyper 优势</h2>
           <p className="mt-3 text-base text-muted-foreground md:text-lg">
@@ -84,7 +85,7 @@ export const VyperVsSolidityClient: FC<{
             </AnimatePresence>
           </div>
         </div>
-      </div>
+      </MaxWidthWrapper>
     </section>
   )
 }

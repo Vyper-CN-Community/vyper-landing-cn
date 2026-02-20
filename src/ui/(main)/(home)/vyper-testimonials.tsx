@@ -4,6 +4,7 @@ import type { FC } from 'react'
 import { motion } from 'motion/react'
 import Image from 'next/image'
 import Link from 'next/link'
+import { MaxWidthWrapper } from '@/ui/components/shared/max-width-wrapper'
 
 type Testimonial = {
   quoteEn: string
@@ -39,8 +40,8 @@ const testimonials: Testimonial[] = [
 
 export const VyperTestimonials: FC = () => {
   return (
-    <section className="border-border border-t px-4 py-20 md:py-28">
-      <div className="mx-auto max-w-6xl">
+    <section className="border-border border-t py-20 md:py-28">
+      <MaxWidthWrapper>
         <motion.div
           initial={{ opacity: 0, y: 18 }}
           whileInView={{ opacity: 1, y: 0 }}
@@ -113,7 +114,7 @@ export const VyperTestimonials: FC = () => {
             </motion.article>
           ))}
         </div>
-      </div>
+      </MaxWidthWrapper>
     </section>
   )
 }

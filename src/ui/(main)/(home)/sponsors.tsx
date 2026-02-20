@@ -5,6 +5,7 @@ import { motion } from 'motion/react'
 import Image, { type StaticImageData } from 'next/image'
 import Link from 'next/link'
 import { cn } from '@/lib/utils/shadcn'
+import { MaxWidthWrapper } from '@/ui/components/shared/max-width-wrapper'
 import aerodromeLogo from './assets/sponsors/aerodrome.png'
 import arbitrumLogo from './assets/sponsors/arbitrum.png'
 import curveLogo from './assets/sponsors/curve.png'
@@ -119,8 +120,8 @@ const sponsors: Sponsor[] = [
 
 export const Sponsors: FC<ComponentProps<'section'>> = () => {
   return (
-    <section className="border-border border-t px-4 py-20 md:py-28">
-      <div className="mx-auto max-w-6xl">
+    <section className="border-border border-t py-20 md:py-28">
+      <MaxWidthWrapper>
         <motion.div
           initial={{ opacity: 0, y: 18 }}
           whileInView={{ opacity: 1, y: 0 }}
@@ -206,7 +207,7 @@ export const Sponsors: FC<ComponentProps<'section'>> = () => {
             </Link>
           ))}
         </div>
-      </div>
+      </MaxWidthWrapper>
     </section>
   )
 }

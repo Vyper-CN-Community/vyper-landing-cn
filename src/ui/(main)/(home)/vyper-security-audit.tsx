@@ -4,6 +4,7 @@ import type { ComponentProps, FC } from 'react'
 import { motion } from 'motion/react'
 import Image, { type StaticImageData } from 'next/image'
 import Link from 'next/link'
+import { MaxWidthWrapper } from '@/ui/components/shared/max-width-wrapper'
 import anatomistAvatar from './assets/audits/anatomist.jpg'
 import chainsecurityLogo from './assets/audits/chainsecurity.svg'
 import ottersecLogo from './assets/audits/ottersec.svg'
@@ -52,8 +53,8 @@ const auditPartners: AuditPartner[] = [
 
 export const VyperSecurityAduit: FC<ComponentProps<'section'>> = () => {
   return (
-    <section className="border-border border-t px-4 py-20 md:py-28">
-      <div className="mx-auto max-w-6xl">
+    <section className="border-border border-t py-20 md:py-28">
+      <MaxWidthWrapper>
         <motion.div
           initial={{ opacity: 0, y: 18 }}
           whileInView={{ opacity: 1, y: 0 }}
@@ -138,7 +139,7 @@ export const VyperSecurityAduit: FC<ComponentProps<'section'>> = () => {
             </Link>
           </div>
         </motion.div>
-      </div>
+      </MaxWidthWrapper>
     </section>
   )
 }
