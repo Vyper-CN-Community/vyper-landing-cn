@@ -6,6 +6,7 @@ import Image, { type StaticImageData } from 'next/image'
 import Link from 'next/link'
 import { cn } from '@/lib/utils/shadcn'
 import { MaxWidthWrapper } from '@/ui/components/shared/max-width-wrapper'
+import snekTeam from './assets/sneks/snek-team.png'
 import aerodromeLogo from './assets/sponsors/aerodrome.png'
 import arbitrumLogo from './assets/sponsors/arbitrum.png'
 import curveLogo from './assets/sponsors/curve.png'
@@ -120,8 +121,18 @@ const sponsors: Sponsor[] = [
 
 export const Sponsors: FC<ComponentProps<'section'>> = () => {
   return (
-    <section className="border-border border-t py-20 md:py-28">
-      <MaxWidthWrapper>
+    <section className="relative overflow-hidden border-border border-t py-20 md:py-28">
+      <MaxWidthWrapper className="relative">
+        <div className="pointer-events-none absolute -top-12 right-0 -z-10 opacity-30 md:opacity-50">
+          <Image
+            src={snekTeam}
+            alt=""
+            width={300}
+            height={300}
+            className="h-auto w-40 object-contain md:w-64"
+          />
+        </div>
+
         <motion.div
           initial={{ opacity: 0, y: 18 }}
           whileInView={{ opacity: 1, y: 0 }}

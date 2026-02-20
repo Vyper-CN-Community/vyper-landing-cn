@@ -1,12 +1,23 @@
 import type { ComponentProps, FC } from 'react'
+import Image from 'next/image'
 import Link from 'next/link'
 import { FadeIn } from '@/ui/components/shared/fade-in'
 import { MaxWidthWrapper } from '@/ui/components/shared/max-width-wrapper'
+import snekDeveloper from './assets/sneks/snek-developer.png'
 
 export const HeroSection: FC<ComponentProps<'div'>> = () => {
   return (
-    <section className="pt-20 pb-16 md:pt-32 md:pb-28">
-      <MaxWidthWrapper className="flex flex-col items-center">
+    <section className="relative overflow-hidden pt-20 pb-16 md:pt-32 md:pb-28">
+      <MaxWidthWrapper className="relative flex flex-col items-center">
+        <div className="pointer-events-none absolute bottom-32 left-0 -z-10 opacity-30 md:opacity-50">
+          <Image
+            src={snekDeveloper}
+            alt=""
+            width={400}
+            height={400}
+            className="h-auto w-48 object-contain md:w-80"
+          />
+        </div>
         <FadeIn>
           <div className="mb-6 inline-flex items-center rounded-full border border-border bg-card px-3 py-1 text-muted-foreground text-xs">
             Pythonic Smart Contract Language for EVM

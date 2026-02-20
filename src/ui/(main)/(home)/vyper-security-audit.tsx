@@ -9,6 +9,7 @@ import anatomistAvatar from './assets/audits/anatomist.jpg'
 import chainsecurityLogo from './assets/audits/chainsecurity.svg'
 import ottersecLogo from './assets/audits/ottersec.svg'
 import statemindAvatar from './assets/audits/statemind.jpg'
+import snekSecurity from './assets/sneks/snek-security.png'
 
 type AuditPartner = {
   name: string
@@ -53,8 +54,18 @@ const auditPartners: AuditPartner[] = [
 
 export const VyperSecurityAduit: FC<ComponentProps<'section'>> = () => {
   return (
-    <section className="border-border border-t py-20 md:py-28">
-      <MaxWidthWrapper>
+    <section className="relative overflow-hidden border-border border-t py-20 md:py-28">
+      <MaxWidthWrapper className="relative">
+        <div className="pointer-events-none absolute -top-10 left-0 -z-10 opacity-30 md:opacity-50">
+          <Image
+            src={snekSecurity}
+            alt=""
+            width={200}
+            height={200}
+            className="h-auto w-24 object-contain md:w-40"
+          />
+        </div>
+
         <motion.div
           initial={{ opacity: 0, y: 18 }}
           whileInView={{ opacity: 1, y: 0 }}
