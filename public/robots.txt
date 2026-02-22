@@ -1,0 +1,9 @@
+# *
+User-agent: *
+Allow: /
+
+# Host
+Host: https://cn.vyperlang.org
+
+# Sitemaps
+Sitemap: https://cn.vyperlang.org/sitemap.xml

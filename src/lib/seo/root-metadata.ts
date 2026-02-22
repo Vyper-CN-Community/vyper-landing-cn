@@ -1,47 +1,40 @@
 import type { Metadata } from 'next'
+import siteConfig from './site-config.json'
 
-const SITE_URL = 'https://cn.vyperlang.org'
-const SITE_NAME = 'Vyper 中文社区'
-const SITE_LOCALE = 'zh_CN'
+const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? siteConfig.siteUrl
+const siteName = siteConfig.siteName
+const siteLocale = siteConfig.siteLocale
 
 const isProduction = process.env.NEXT_PUBLIC_ENVIRONMENT === 'production'
-
-const description =
-  'Vyper 是面向 EVM 的智能合约语言，专注于安全性、简洁性和可审计性。探索 Vyper 与 Solidity 对比、审计实践与开发文档。'
+const description = siteConfig.description
+const title = `${siteName} | ${siteConfig.titleSuffix}`
 
 export const rootMetadata: Metadata = {
-  metadataBase: new URL(SITE_URL),
+  metadataBase: new URL(siteUrl),
   title: {
-    default: `${SITE_NAME} | 安全、简洁、可审计的智能合约开发`,
-    template: `%s | ${SITE_NAME}`,
+    default: title,
+    template: `%s | ${siteName}`,
   },
   description,
-  applicationName: SITE_NAME,
-  keywords: [
-    'Vyper',
-    'Vyper 中文社区',
-    '智能合约',
-    'EVM',
-    'Solidity',
-    '以太坊',
-    '区块链开发',
-    '智能合约安全',
-    'Vyperlang',
-  ],
+  applicationName: siteName,
+  keywords: siteConfig.keywords,
   alternates: {
     canonical: '/',
+    types: {
+      'application/xml': `${siteUrl}/sitemap.xml`,
+    },
   },
   openGraph: {
     type: 'website',
-    locale: SITE_LOCALE,
+    locale: siteLocale,
     url: '/',
-    siteName: SITE_NAME,
-    title: `${SITE_NAME} | 安全、简洁、可审计的智能合约开发`,
+    siteName: siteName,
+    title,
     description,
   },
   twitter: {
     card: 'summary',
-    title: SITE_NAME,
+    title: siteName,
     description,
   },
   robots: {
