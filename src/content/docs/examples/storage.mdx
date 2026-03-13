@@ -1,0 +1,41 @@
+<Lead>
+  最简存储合约：展示 Vyper 中状态变量的基本读写操作。
+</Lead>
+
+<Callout title="学习用途">
+  本示例仅用于学习目的。请勿在未经充分审查和测试的情况下用于生产环境。
+</Callout>
+
+<h2 id="overview">概览</h2>
+
+这是 Vyper 最基础的合约示例，只有一个状态变量和一个写入方法。适合作为学习 Vyper 的第一个合约。
+
+<h2 id="contract-code">完整合约代码</h2>
+
+```vyper
+#pragma version >0.3.10
+
+storedData: public(int128)
+
+@deploy
+def __init__(_x: int128):
+  self.storedData = _x
+
+@external
+def set(_x: int128):
+  self.storedData = _x
+```
+
+<h2 id="walkthrough">代码解析</h2>
+
+### 状态变量
+
+`storedData` 声明为 `public(int128)`，编译器自动生成同名 getter 函数，外部可通过 `contract.storedData()` 读取。
+
+### 构造函数
+
+`__init__` 接收一个初始值并存入 `storedData`。
+
+### set() — 更新值
+
+任何人都可以调用 `set()` 修改存储值。在实际应用中，通常会添加权限检查（如 `assert msg.sender == self.owner`）。

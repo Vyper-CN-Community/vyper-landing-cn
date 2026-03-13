@@ -1,75 +1,343 @@
 <Lead>
   Vyper 没有把底层能力藏起来，它只是要求你通过显式内建函数去使用这些能力。
-  这样既保留了对 EVM 的访问，又尽量避免把整份合约变成难以审查的汇编拼图。
+  本页按功能分类列出所有内建函数，覆盖密码学、数据操作、数学运算、
+  合约创建、底层调用和实用工具。
 </Lead>
 
 <h2 id="bitwise-and-deprecations">位运算与弃用项</h2>
 
-`refer/docs/built-in-functions.rst` 明确指出，一些旧内建已经被运算符替代：
+从 0.3.8 起，`shift()` 已弃用，改用 `<<` 和 `>>` 运算符。
+从 0.3.4 起，`bitwise_and`、`bitwise_or`、`bitwise_xor`、`bitwise_not` 已被对应运算符 `&`、`|`、`^`、`~` 替代，并在 0.4.2 中完全移除。
 
-- `shift()` 已弃用，改用 `<<` 和 `>>`。
-- `bitwise_and`、`bitwise_or`、`bitwise_xor`、`bitwise_not` 已被对应运算符替换。
-
-这类调整的方向很一致：尽量让代码读起来更直接，而不是记住一套额外 API 名称。
+方向很一致：让代码读起来更直接，不需要记住额外的 API 名称。
 
 <h2 id="contract-creation">合约创建原语</h2>
 
-Vyper 常见的合约创建能力可以粗分为四类：
+Vyper 提供四种合约创建方式，各有不同的创建成本、调用开销和构造函数支持：
 
 | 能力 | 适用场景 | 关键特征 |
 | --- | --- | --- |
-| `create_minimal_proxy_to()` | 低成本克隆 | 创建便宜，调用有 `DELEGATECALL` 开销。 |
-| `create_copy_of()` | 复制运行时代码 | 部署贵一些，但调用更直接。 |
-| `create_from_blueprint()` | 基于 blueprint 部署 | 支持构造函数，适合工厂模式。 |
-| `raw_create()` | 底层 create / create2 | 自由度最高，也最需要自律。 |
+| `create_minimal_proxy_to()` | 低成本克隆 | 创建便宜（仅部署 EIP-1167 转发字节码），调用有 `DELEGATECALL` 开销 |
+| `create_copy_of()` | 复制运行时代码 | 逐字节复制，调用无额外开销，但创建较贵（200 gas/字节） |
+| `create_from_blueprint()` | 基于 blueprint 部署 | 支持构造函数，需要预部署 blueprint 合约 |
+| `raw_create()` | 底层 create/create2 | 自由度最高，直接传入 initcode |
 
-示例：
+### create_minimal_proxy_to
+
+```vyper
+create_minimal_proxy_to(
+    target: address,
+    value: uint256 = 0,
+    revert_on_failure: bool = True,
+    [salt: bytes32]
+) -> address
+```
+
+部署一个 EIP-1167 兼容的最小代理合约。代理合约拥有独立状态，但逻辑通过 `DELEGATECALL` 委托给 `target`。
 
 ```vyper
 @external
-def clone(target: address) -> address:
+def foo(target: address) -> address:
     return create_minimal_proxy_to(target)
 ```
 
-如果你用 blueprint，记得确认 `code_offset` 与部署前缀保持一致，否则很容易在运行时踩坑。
+<Callout title="安全提示">
+  确保 `target` 合约是你已知且可信的代码，不实现 `selfdestruct` 也没有可升级逻辑。
+  编译器不会检查 `target` 地址是否已有代码（支持反事实部署），多数应用应自行添加此检查。
+</Callout>
 
-<h2 id="low-level-calls">低层调用</h2>
+### create_copy_of
 
-低层调用通常通过 `raw_call()` 完成：
+```vyper
+create_copy_of(
+    target: address,
+    value: uint256 = 0,
+    revert_on_failure: bool = True,
+    [salt: bytes32]
+) -> address
+```
+
+创建 `target` 运行时代码的物理副本。会执行 `EXTCODESIZE` 检查确认 `target` 有代码。
+
+### create_from_blueprint
+
+```vyper
+create_from_blueprint(
+    target: address,
+    *args,
+    value: uint256 = 0,
+    raw_args: bool = False,
+    code_offset: int = 3,
+    revert_on_failure: bool = True,
+    [salt: bytes32]
+) -> address
+```
+
+将 `target` 的代码作为 initcode 执行。`*args` 作为构造函数参数进行 ABI 编码。
+
+```vyper
+@external
+def foo(blueprint: address) -> address:
+    arg1: uint256 = 18
+    arg2: String[32] = "some string"
+    return create_from_blueprint(blueprint, arg1, arg2, code_offset=1)
+```
+
+<Callout title="Blueprint 部署">
+  使用 `vyper -f blueprint_bytecode` 生成 ERC-5202 兼容的 blueprint 字节码。
+  推荐使用 `0xFE7100` 前缀来防止 blueprint 被当作普通合约调用。
+  `code_offset` 默认为 3（对应 ERC-5202 前缀长度）。
+</Callout>
+
+### raw_create
+
+```vyper
+raw_create(
+    initcode: Bytes[...],
+    *args,
+    value: uint256 = 0,
+    revert_on_failure: bool = True,
+    [salt: bytes32]
+) -> address
+```
+
+底层创建，直接传入 initcode 字节。`*args` 会被 ABI 编码后拼接到 initcode 后面。
+
+<h2 id="low-level-calls">底层调用与日志</h2>
+
+### raw_call
+
+```vyper
+raw_call(
+    to: address,
+    data: Bytes,
+    max_outsize: uint256 = 0,
+    gas: uint256 = gasLeft,
+    value: uint256 = 0,
+    is_delegate_call: bool = False,
+    is_static_call: bool = False,
+    revert_on_failure: bool = True
+) -> Bytes[max_outsize]
+```
+
+向指定地址发起底层调用。
 
 ```vyper
 @external
 @payable
-def forward(target: address) -> Bytes[32]:
+def foo(_target: address) -> Bytes[32]:
     response: Bytes[32] = raw_call(
-        target,
-        method_id("ping()"),
+        _target,
+        method_id("someMethodName()"),
         max_outsize=32,
-        value=msg.value,
+        value=msg.value
     )
     return response
 ```
 
-需要重点关注的参数包括：
+当 `revert_on_failure=False` 时，返回 `(success, response)` 元组：
 
-- `max_outsize`：返回数据最大长度。
-- `value`：是否携带 ETH。
-- `is_delegate_call` / `is_static_call`：调用模式。
-- `revert_on_failure`：失败时是回滚还是返回成功标志。
+```vyper
+@external
+@payable
+def bar(_target: address) -> Bytes[32]:
+    success: bool = False
+    response: Bytes[32] = b""
+    x: uint256 = 123
+    success, response = raw_call(
+        _target,
+        abi_encode(x, method_id=method_id("someMethodName(uint256)")),
+        max_outsize=32,
+        value=msg.value,
+        revert_on_failure=False
+    )
+    assert success
+    return response
+```
 
-这类 API 没有被禁止，但使用者必须明确承担它的边界复杂度。
+### raw_log
 
-<h2 id="safety-checklist">使用清单</h2>
+```vyper
+raw_log(topics: bytes32[4], data: Union[Bytes, bytes32]) -> None
+```
 
-在使用底层原语前，建议逐项确认：
+底层日志，不需要声明 ABI 类型。`topics` 列表长度决定使用哪个 `LOG` 操作码。
 
-1. 目标合约代码是否可信，尤其是 proxy 场景。
-2. 是否真的需要底层调用，而不是普通接口调用。
-3. 返回值长度和失败分支是否被显式处理。
-4. 对 blueprint / proxy 的生命周期和升级行为是否有清楚预期。
-5. 是否已经把这些关键边界写进测试和文档。
+### raw_revert
 
-<Callout title="经验规则">
-  底层能力不是不能用，而是只在你真正理解代价时再用。对多数业务合约而言，
-  越靠近接口级写法，越容易维护。
+```vyper
+raw_revert(data: Bytes) -> None
+```
+
+底层 revert，返回指定数据。
+
+### send
+
+```vyper
+send(to: address, value: uint256, gas: uint256 = 0) -> None
+```
+
+向目标地址发送 ETH。金额始终以 wei 为单位。`gas` 默认为 0（即不附带 stipend）。
+
+<h2 id="safety-checklist">密码学函数</h2>
+
+### keccak256
+
+```vyper
+keccak256(_value) -> bytes32
+```
+
+返回输入的 keccak256 哈希。输入可以是 `String`、`Bytes` 或 `bytes32`。
+
+```vyper
+@external
+@view
+def foo(_value: Bytes[100]) -> bytes32:
+    return keccak256(_value)
+```
+
+### sha256
+
+```vyper
+sha256(_value) -> bytes32
+```
+
+返回输入的 SHA-256 哈希。输入类型与 `keccak256` 相同。
+
+### ecrecover
+
+```vyper
+ecrecover(hash: bytes32, v: uint256 | uint8, r: uint256 | bytes32, s: uint256 | bytes32) -> address
+```
+
+从椭圆曲线签名中恢复关联的地址。无效输入返回 `empty(address)`。
+
+```vyper
+@external
+@view
+def foo(hash: bytes32, v: uint8, r: bytes32, s: bytes32) -> address:
+    return ecrecover(hash, v, r, s)
+```
+
+### ecadd / ecmul
+
+```vyper
+ecadd(a: uint256[2], b: uint256[2]) -> uint256[2]
+ecmul(point: uint256[2], scalar: uint256) -> uint256[2]
+```
+
+Alt-BN128 曲线上的点加法和标量乘法。
+
+### 数据操作函数
+
+| 函数 | 签名 | 说明 |
+| --- | --- | --- |
+| `concat` | `concat(a, b, *args) -> Bytes \| String` | 拼接多个字节数组或字符串 |
+| `slice` | `slice(b, start, length) -> Bytes \| String` | 截取指定范围的片段 |
+| `len` | `len(b) -> uint256` | 返回 `Bytes`、`String` 或 `DynArray` 的长度 |
+| `convert` | `convert(value, type_) -> Any` | 显式类型转换（详见[类型系统](/docs/types)） |
+| `uint2str` | `uint2str(value) -> String` | 无符号整数转字符串 |
+| `extract32` | `extract32(b, start, output_type=bytes32) -> Any` | 从字节数组中提取 32 字节值 |
+| `method_id` | `method_id(method, output_type=Bytes[4]) -> Bytes[4] \| bytes4` | 计算函数选择器 |
+
+```vyper
+@external
+@view
+def foo(s: String[32]) -> String[5]:
+    return slice(s, 4, 5)
+
+@external
+@view
+def bar() -> Bytes[4]:
+    return method_id('transfer(address,uint256)', output_type=Bytes[4])
+```
+
+### ABI 编码与解码
+
+```vyper
+abi_encode(*args, ensure_tuple: bool = True, method_id: Bytes[4] = None) -> Bytes[...]
+abi_decode(b: Bytes, output_type: type_, unwrap_tuple: bool = True) -> Any
+```
+
+- `abi_encode` 将参数序列化为 ABIv2 格式，常用于 `raw_call` 的数据构造。
+- `abi_decode` 将 ABIv2 编码的字节串解码为指定类型。
+
+```vyper
+@external
+@view
+def foo() -> Bytes[132]:
+    x: uint256 = 1
+    y: Bytes[32] = b"234"
+    return abi_encode(x, y, method_id=method_id("foo()"))
+
+@external
+@view
+def bar(someInput: Bytes[128]) -> (uint256, Bytes[32]):
+    x: uint256 = empty(uint256)
+    y: Bytes[32] = empty(Bytes[32])
+    x, y = abi_decode(someInput, (uint256, Bytes[32]))
+    return x, y
+```
+
+### 数学函数
+
+| 函数 | 说明 |
+| --- | --- |
+| `abs(value: int256) -> int256` | 绝对值 |
+| `ceil(value: decimal) -> int256` | 向上取整 |
+| `floor(value: decimal) -> int256` | 向下取整 |
+| `max(a, b) -> numeric` | 较大值 |
+| `min(a, b) -> numeric` | 较小值 |
+| `max_value(type_) -> numeric` | 类型的最大值 |
+| `min_value(type_) -> numeric` | 类型的最小值 |
+| `pow_mod256(a, b) -> uint256` | `a ** b % (2 ** 256)`，无溢出检查的指数运算 |
+| `sqrt(d: decimal) -> decimal` | 十进制平方根，向下舍入到最近的 epsilon |
+| `isqrt(x: uint256) -> uint256` | 整数平方根，向下舍入 |
+| `uint256_addmod(a, b, c) -> uint256` | `(a + b) % c`（中间计算不受 2^256 取模） |
+| `uint256_mulmod(a, b, c) -> uint256` | `(a * b) % c`（中间计算不受 2^256 取模） |
+| `epsilon(typename) -> decimal` | 返回 decimal 类型的最小非零值 |
+
+### Unsafe 数学函数
+
+这些函数跳过溢出检查，结果会在类型范围内回绕。主要用于性能敏感场景：
+
+| 函数 | 说明 |
+| --- | --- |
+| `unsafe_add(x, y)` | 无溢出检查的加法 |
+| `unsafe_sub(x, y)` | 无溢出检查的减法 |
+| `unsafe_mul(x, y)` | 无溢出检查的乘法 |
+| `unsafe_div(x, y)` | 无除零检查的除法（除数为 0 时返回 0） |
+
+```vyper
+@external
+@view
+def foo(x: uint8, y: uint8) -> uint8:
+    return unsafe_add(x, y)
+    # unsafe_add(255, 255) == 254 (回绕)
+```
+
+<Callout title="性能提示">
+  对于 EVM 原生字宽类型 `uint256` 和 `int256`，unsafe 函数会直接编译为单条 EVM 指令
+  （`ADD`、`SUB`、`MUL`、`DIV`/`SDIV`），因为 EVM 本身就对 256 位运算进行回绕。
+</Callout>
+
+### 实用工具
+
+| 函数 | 说明 |
+| --- | --- |
+| `as_wei_value(value, unit)` | 将以太币单位转为 wei，例如 `as_wei_value(1.337, "ether")` |
+| `blockhash(block_num)` | 返回指定区块哈希（仅最近 256 个区块可访问） |
+| `blobhash(index)` | 返回当前交易中第 index 个 blob 的版本化哈希 |
+| `empty(typename)` | 返回类型的零值，用于初始化 |
+| `print(*args)` | 调试打印，通过静态调用 console 地址实现 |
+
+<Callout title="关于 print">
+  `print` 的静态调用不会在生产代码中被移除，编译器只会发出警告。
+  默认模式与 titanoboa 兼容，使用 `hardhat_compat=True` 可适配 Hardhat 风格框架。
+</Callout>
+
+<Callout title="参数求值顺序">
+  从 v0.4.0 起，内建函数的参数求值顺序未定义。编译器可能重排参数的求值顺序。
+  避免在内建函数调用中使用有副作用的函数作为参数，例如 `extract32(x(), y())` 
+  可能产生非预期结果。
 </Callout>

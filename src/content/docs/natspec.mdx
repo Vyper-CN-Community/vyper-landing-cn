@@ -1,0 +1,119 @@
+<Lead>
+  `refer/docs/natspec.rst` 介绍了 NatSpec，也就是 Ethereum Natural Language Specification。
+  它让 Vyper 合约能把开发者说明和面向终端用户的说明一起编进编译产物。
+</Lead>
+
+<h2 id="overview">NatSpec 概览</h2>
+
+Vyper 可以使用一种特殊 docstring 为合约、外部函数、返回值等提供结构化文档。
+这些文档会区分为两类：
+
+- 面向终端用户的说明，适合在签名交易时展示。
+- 面向开发者的说明，适合放进文档系统、审计产物或工具链输出。
+
+Vyper 使用接近 doxygen 的标记风格。一个完整示例如下：
+
+```vyper
+"""
+@title A simulator for Bug Bunny, the most famous Rabbit
+@license MIT
+@author Warned Bros
+@notice You can use this contract for only the most basic simulation
+@dev Simply chewing a carrot does not count, carrots must pass the throat to be considered eaten
+"""
+
+@external
+@payable
+def doesEat(food: String[30], qty: uint256) -> bool:
+    """
+    @notice Determine if Bugs will accept `qty` of `food` to eat
+    @dev Compares the entire string and does not rely on a hash
+    @param food The name of a food to evaluate (in English)
+    @param qty The number of food items to evaluate
+    @return True if Bugs will eat it, False otherwise
+    """
+```
+
+<Callout title="内部函数不会被处理">
+  编译器不会解析内部函数的 docstring。你仍然可以给内部函数写普通注释或 NatSpec 风格注释，
+  但这些内容不会进入编译器输出。
+</Callout>
+
+<h2 id="tags">标签说明</h2>
+
+所有 NatSpec 标签都是可选的。官方文档给出的常用标签如下：
+
+| 标签 | 说明 | 适用范围 |
+| --- | --- | --- |
+| `@title` | 描述合约标题 | 合约 |
+| `@license` | 合约许可证 | 合约 |
+| `@author` | 作者名 | 合约、函数 |
+| `@notice` | 面向终端用户的说明 | 合约、函数 |
+| `@dev` | 面向开发者的补充说明 | 合约、函数 |
+| `@param` | 描述单个输入参数 | 函数 |
+| `@return` | 描述一个或全部返回值 | 函数 |
+| `@custom:...` | 自定义标签，语义由应用定义 | 合约、函数 |
+
+使用时还有几条规则：
+
+1. 单个标签的描述可以跨多行，编译器会把中间空白折叠成一个空格。
+2. 如果写了 docstring 但没有任何 NatSpec 标签，它会被当作 `@notice`。
+3. 每个 `@param` 后面都必须跟一个真实存在的输入参数名；重复或无效名称会抛出 `NatSpecSyntaxException`。
+4. `@return` 最好一项对应一个返回值，也可以把所有返回值合并写成一项；如果数量超出真实返回值数量，同样会报 `NatSpecSyntaxException`。
+
+<h2 id="documentation-output">文档输出</h2>
+
+编译器会把 NatSpec 解析成两份 JSON：
+
+- `userdoc`：给终端用户展示的说明。
+- `devdoc`：给开发者和工具链消费的详细说明。
+
+如果合约文件名是 `carrots.vy`，可以这样导出：
+
+```bash
+vyper -f userdoc,devdoc carrots.vy
+```
+
+### `userdoc`
+
+上面的示例会生成类似这样的用户文档：
+
+```json
+{
+  "methods": {
+    "doesEat(string,uint256)": {
+      "notice": "Determine if Bugs will accept `qty` of `food` to eat"
+    }
+  },
+  "notice": "You can use this contract for only the most basic simulation"
+}
+```
+
+这里的方法键名不是函数名本身，而是 ABI 里的规范签名，例如 `doesEat(string,uint256)`。
+
+### `devdoc`
+
+开发者文档会额外包含作者、许可证、参数说明和返回值说明：
+
+```json
+{
+  "author": "Warned Bros",
+  "license": "MIT",
+  "details": "Simply chewing a carrot does not count, carrots must pass the throat to be considered eaten",
+  "methods": {
+    "doesEat(string,uint256)": {
+      "details": "Compares the entire string and does not rely on a hash",
+      "params": {
+        "food": "The name of a food to evaluate (in English)",
+        "qty": "The number of food items to evaluate"
+      },
+      "returns": {
+        "_0": "True if Bugs will eat it, False otherwise"
+      }
+    }
+  },
+  "title": "A simulator for Bug Bunny, the most famous Rabbit"
+}
+```
+
+如果你的团队要做钱包弹窗说明、合约门户、审计附录或 SDK 文档，NatSpec 是最轻量也最标准的元数据来源。

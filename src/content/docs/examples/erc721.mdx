@@ -1,0 +1,67 @@
+<Lead>
+  ERC-721 非同质化代币合约：实现 NFT 标准，支持铸造、转账、授权和安全转账。
+</Lead>
+
+<Callout title="学习用途">
+  本示例仅用于学习目的。完整合约代码较长，请参阅
+  [源码文件](https://github.com/vyperlang/vyper/blob/master/examples/tokens/ERC721.vy)。
+</Callout>
+
+<h2 id="overview">概览</h2>
+
+ERC-721 是以太坊上非同质化代币（NFT）的标准。每个代币都有唯一的 ID。本合约实现了：
+
+- `IERC721` 和 `IERC165` 接口
+- `safeTransferFrom`：带接收者检查的安全转账
+- `approve` / `setApprovalForAll`：单个 / 批量授权
+- `mint` / `burn`：铸造和销毁
+- `ERC721Receiver` 回调接口
+
+<h2 id="contract-code">核心结构</h2>
+
+```vyper
+#pragma version >0.3.10
+
+from ethereum.ercs import IERC165
+from ethereum.ercs import IERC721
+
+implements: IERC721
+implements: IERC165
+
+interface ERC721Receiver:
+    def onERC721Received(
+            _operator: address,
+            _from: address,
+            _tokenId: uint256,
+            _data: Bytes[1024]
+        ) -> bytes4: nonpayable
+
+idToOwner: HashMap[uint256, address]
+idToApprovals: HashMap[uint256, address]
+ownerToNFTokenCount: HashMap[address, uint256]
+ownerToOperators: HashMap[address, HashMap[address, bool]]
+minter: address
+
+SUPPORTED_INTERFACES: constant(bytes4[2]) = [
+    0x01ffc9a7,  # ERC165
+    0x80ac58cd,  # ERC721
+]
+```
+
+<h2 id="walkthrough">代码解析</h2>
+
+### ERC-165 支持
+
+`supportsInterface` 检查请求的接口 ID 是否在支持列表中。这使其他合约能在调用前验证是否支持 ERC-721。
+
+### 安全转账
+
+`safeTransferFrom` 在转账后检查接收者是否是合约——如果是，调用 `onERC721Received` 回调并验证返回值。这防止了代币被发送到不能处理它们的合约中永久锁定。
+
+### 授权机制
+
+两级授权：`approve` 授权单个代币，`setApprovalForAll` 授权某地址操作所有者的全部代币（常用于 NFT 市场）。
+
+### 铸造与销毁
+
+`mint` 仅限 minter 调用，分配新的 token ID 给目标地址。`burn` 销毁代币并清除所有相关的授权状态。

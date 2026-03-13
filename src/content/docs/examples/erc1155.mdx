@@ -1,0 +1,56 @@
+<Lead>
+  ERC-1155 多代币合约：在单个合约中管理多种同质化和非同质化代币，支持批量操作。
+</Lead>
+
+<Callout title="学习用途">
+  本示例仅用于学习目的。完整合约代码较长，请参阅
+  [源码文件](https://github.com/vyperlang/vyper/blob/master/examples/tokens/ERC1155ownable.vy)。
+</Callout>
+
+<h2 id="overview">概览</h2>
+
+ERC-1155 是一种多代币标准，允许单个合约表示任意数量的同质化和非同质化代币类型。相比分别部署 ERC-20 和 ERC-721，ERC-1155 更节省 gas 且支持批量操作。
+
+本合约实现了：
+
+- 批量铸造和转账（`safeBatchTransferFrom`）
+- 余额批量查询（`balanceOfBatch`）
+- URI 管理（支持动态 URI）
+- 所有者权限控制和暂停功能
+- OpenSea 兼容的 `name` 和 `symbol`
+
+<h2 id="contract-code">核心结构</h2>
+
+```vyper
+#pragma version >0.3.10
+
+from ethereum.ercs import IERC165
+
+BATCH_SIZE: constant(uint256) = 128
+MAX_URI_LENGTH: constant(uint256) = 300
+
+owner: public(address)
+paused: public(bool)
+
+name: public(String[128])
+symbol: public(String[16])
+
+# balances[id][owner] -> balance
+balanceOf: public(HashMap[uint256, HashMap[address, uint256]])
+# operator approvals
+isApprovedForAll: public(HashMap[address, HashMap[address, bool]])
+```
+
+<h2 id="walkthrough">代码解析</h2>
+
+### 批量操作
+
+`safeBatchTransferFrom` 在单次交易中转移多种代币，显著降低多代币转账的 gas 成本。使用固定大小数组（`BATCH_SIZE = 128`）来限制单次批量操作的最大规模。
+
+### URI 系统
+
+支持静态和动态两种 URI 模式。动态模式通过 `uint2str` 将代币 ID 转为字符串拼接到基础 URI 后，生成每个代币类型的元数据 URL。
+
+### 安全检查
+
+所有转账操作都会检查接收者是否为合约，如果是则调用 `onERC1155Received` 或 `onERC1155BatchReceived` 回调验证。

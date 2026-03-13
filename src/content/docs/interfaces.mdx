@@ -1,0 +1,176 @@
+<Lead>
+  `refer/docs/interfaces.rst` 解释了 Vyper 如何声明、导入、实现和导出接口。
+  接口本质上是一组外部函数签名，用来让合约之间安全地通信。
+</Lead>
+
+<h2 id="declaring-and-using">声明与使用接口</h2>
+
+接口既可以直接写在当前合约里，也可以从独立文件导入。
+
+### 内联接口
+
+使用 `interface` 关键字可以定义内联外部接口：
+
+```vyper
+interface FooBar:
+    def calculate() -> uint256: view
+    def test1(): nonpayable
+```
+
+定义完成后，就可以把它当成参数类型来发起外部调用：
+
+```vyper
+@external
+def test(foobar: FooBar):
+    extcall foobar.test1()
+
+@external
+def test2(foobar: FooBar) -> uint256:
+    return staticcall foobar.calculate()
+```
+
+接口类型也可以直接用于状态变量，然后在构造时绑定一个地址：
+
+```vyper
+foobar_contract: FooBar
+
+@deploy
+def __init__(foobar_address: address):
+    self.foobar_contract = FooBar(foobar_address)
+
+@external
+def test():
+    extcall self.foobar_contract.test1()
+```
+
+如果你已经有一个地址变量，也可以显式把它转换为接口类型，例如 `FooBar(some_address)`。
+
+### `extcall` 与 `staticcall`
+
+Vyper 强制你在外部调用前写出调用意图：
+
+- `staticcall` 只用于 `view` 和 `pure` 函数。
+- `extcall` 用于 `payable` 和 `nonpayable` 函数。
+- `payable` 调用允许附带非零 `value`。
+- `staticcall` 的输出必须被接收或直接返回。
+
+```vyper
+interface FooBar:
+    def calculate() -> uint256: pure
+    def query() -> uint256: view
+    def update(): nonpayable
+    def pay(): payable
+
+@external
+def test(foobar: FooBar):
+    value: uint256 = staticcall foobar.calculate()
+    value = staticcall foobar.query()
+    extcall foobar.update()
+    extcall foobar.pay(value=1)
+```
+
+<Callout title="签名必须精确匹配">
+  如果接口中的签名和目标合约真实签名不一致，运行时可能报错，甚至出现未定义行为。
+  例如把真实会改状态的函数错误标成 `view`，`staticcall` 就可能在被调合约里直接回滚。
+</Callout>
+
+### 外部调用可选参数
+
+Vyper 允许给外部调用传入一些额外关键字参数：
+
+| 关键字 | 作用 |
+| --- | --- |
+| `gas` | 指定本次调用可用的 gas |
+| `value` | 指定随调用发送的 ether |
+| `skip_contract_check` | 跳过 `EXTCODESIZE` 检查，但保留 `RETURNDATASIZE` 检查 |
+| `default_return_value` | 当目标未返回值时，指定一个默认返回值 |
+
+`default_return_value` 对兼容“缺失返回值”的旧 ERC20 很有用，行为类似 Solidity 里的 `safeTransfer`：
+
+```vyper
+extcall IERC20(USDT).transfer(msg.sender, 1, default_return_value=True)
+extcall IERC20(USDT).transfer(msg.sender, 1)
+```
+
+第一行会把“未返回任何值”当作 `True` 处理，第二行则会因为没有返回值而回滚。
+
+<h2 id="built-in-interfaces">内建接口</h2>
+
+Vyper 内置了一些常见标准接口，例如 `IERC20` 和 `IERC721`。它们从 `ethereum.ercs` 导入：
+
+```vyper
+from ethereum.ercs import IERC20
+
+implements: IERC20
+```
+
+这类内建接口适合直接拿来约束 ERC 标准实现，或者给外部调用提供类型信息。
+
+<h2 id="implementing-interfaces">实现接口</h2>
+
+如果要声明“当前合约实现了某个接口”，可以使用 `implements`：
+
+```vyper
+import an_interface as FooBarInterface
+
+implements: FooBarInterface
+```
+
+这里导入的接口通常来自 `an_interface.vyi`，也可以来自 ABI JSON 接口文件。
+编译器会检查当前合约是否真正实现了接口里定义的全部外部函数；如果缺失，就会编译失败。
+
+多个 `implements` 可以合并声明：
+
+```vyper
+implements: Foo
+implements: Bar
+
+# 等价于
+
+implements: (
+    Foo,
+    Bar,
+)
+```
+
+还有几个细节值得记住：
+
+- 如果接口返回 `Bytes`、`DynArray`、`String` 这类需要上界的类型，接口里写的上界在当前版本里会被视为实现方的“最小要求”。
+- 自 v0.4.0 起，接口里定义的事件不需要在实现合约中重新声明；只要导入并使用，它们就会自动出现在 ABI 输出里。
+- 如果接口函数定义了默认参数，例如 `deposit(assets: uint256, receiver: address = msg.sender)`，那意味着被调合约必须真的支持对应的 ABI 签名组合。
+
+<h2 id="standalone-and-extraction">独立接口与导出</h2>
+
+### `.vyi` 独立接口
+
+独立接口文件使用 `.vyi` 后缀，函数体必须写成省略号：
+
+```vyper
+# ISomeInterface.vyi
+
+@external
+def test1():
+    ...
+
+@external
+def calculate() -> uint256:
+    ...
+```
+
+这样编译器才能在导入时识别它是接口文件，而不是普通合约实现。
+
+### 从现有合约导出接口
+
+Vyper 自带接口导出格式，可以从现有合约直接提取接口：
+
+```bash
+vyper -f interface examples/voting/ballot.vy
+```
+
+如果你想得到可直接粘贴到合约里的内联接口格式，也可以导出 `external_interface`：
+
+```bash
+vyper -f external_interface examples/voting/ballot.vy
+```
+
+这两个输出都很适合在审计、重构和模块拆分时快速生成接口边界。

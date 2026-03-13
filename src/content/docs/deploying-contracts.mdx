@@ -1,0 +1,58 @@
+<Lead>
+  `refer/docs/deploying-contracts.rst` 很短，但把部署路径说得很清楚：
+  编译出字节码之后，你可以用客户端、浏览器工具、Titanoboa，或官方在线环境完成部署。
+</Lead>
+
+<h2 id="deployment-options">部署方式</h2>
+
+当你准备把合约部署到测试网或主网时，官方文档给出了几条常见路径：
+
+### 1. 直接拿字节码部署
+
+先用 `vyper` 编译出字节码，再交给 `geth` 或其他 Ethereum 客户端部署：
+
+```bash
+vyper yourFileName.vy
+```
+
+上面的输出就是部署所需的字节码。
+
+### 2. 配合 ABI 走浏览器工具
+
+如果你希望通过浏览器钱包或网页工具部署，可以先导出 ABI：
+
+```bash
+vyper -f abi yourFileName.vy
+```
+
+然后把 ABI 和字节码一起交给浏览器侧工具，例如合约部署面板。
+
+### 3. 使用 Titanoboa
+
+Titanoboa 既能测试，也能连真实 RPC 进行部署：
+
+```python
+import boa
+from eth_account import Account
+
+boa.set_network_env(<RPC URL>)
+
+# 真实项目里应从安全存储中读取私钥
+boa.env.add_account(Account(<a private key>))
+
+deployer = boa.load_partial("yourFileName.vy")
+deployer.deploy()
+```
+
+这种方式适合 Python 驱动的部署脚本，尤其适合已经在用 Titanoboa 跑测试的项目。
+
+### 4. 使用 try.vyperlang.org
+
+官方在线环境 [try.vyperlang.org](https://try.vyperlang.org) 也支持编译和部署。
+它内置了 Titanoboa 和浏览器签名器集成，适合演示、教学或快速验证部署流程。
+
+<h2 id="practical-guidelines">实践建议</h2>
+
+- 如果是本地或 CI 自动化部署，优先使用 Titanoboa 或你自己的脚本化流程。
+- 如果只是临时验证部署参数，在线环境和浏览器工具更省事。
+- 无论使用哪条路径，部署前都应先固定编译器版本、优化模式和目标 EVM 版本，避免“本地能复现，链上产物却不同”。

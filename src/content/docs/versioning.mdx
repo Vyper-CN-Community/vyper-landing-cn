@@ -1,0 +1,104 @@
+<Lead>
+  `refer/docs/versioning.rst` 定义了 Vyper 的版本策略，核心目标是让开发者、集成方和审计方
+  都能判断一次版本升级会影响什么，以及自己需要重点关注哪些变化。
+</Lead>
+
+<h2 id="motivation">为什么需要版本指南</h2>
+
+Vyper 官方把使用者分成三类：
+
+| 用户组 | 典型使用方式 |
+| --- | --- |
+| 开发者（Developers） | 用 Vyper 编写和编译智能合约 |
+| 集成方（Integrators） | 把 Vyper 包或 CLI 集成进工具链 |
+| 审计方（Auditors） | 关注 Vyper 语言特性和安全问题 |
+
+Vyper 的“公共 API”不只有 Python 包和 CLI，还包括语言语法本身。
+这意味着一旦语法、导出模块或命令行行为发生变化，不同角色受到的影响也不同。
+版本指南就是为了明确这种影响边界。
+
+<h2 id="version-types">版本类型</h2>
+
+Vyper 采用接近语义化版本的格式：
+
+```text
+MAJOR.MINOR.PATCH[-STAGE.DEVNUM]
+```
+
+### Major 版本 `X.0.0`
+
+Major 版本允许发生向后不兼容的语法变化，例如 `v1.x` 升到 `v2.x`。
+对开发者来说，这通常意味着较大范围的迁移成本。
+
+发布要求与影响重点：
+
+| 用户组 | 主要关注点 |
+| --- | --- |
+| 开发者 | 语法弃用、重大新特性 |
+| 集成方 | 通常无额外变化 |
+| 审计方 | 审计报告及已修复问题 |
+
+官方还要求在 Major 发布前进行审计，并解决审计中报告的 `moderate` 或 `severe`
+级别漏洞；`minor` 和 `informational` 级别通常也应处理，但最终可由维护者判断。
+
+### Minor 版本 `x.Y.0`
+
+Minor 版本可以引入新特性，也可以修复 `moderate` 或 `severe` 级别漏洞。
+它可能会以不完全向后兼容的方式改变包 API 或 CLI 行为，因此集成方需要特别留意。
+
+| 用户组 | 主要关注点 |
+| --- | --- |
+| 开发者 | 新特性、安全修复 |
+| 集成方 | 外部 API 变化 |
+| 审计方 | `moderate` 或 `severe` 级补丁 |
+
+### Patch 版本 `x.y.Z`
+
+Patch 版本主要用于：
+
+- 文档修复。
+- 使用层 bug 修复。
+- `minor` 或 `informational` 级别漏洞修复。
+- 错误消息与文档层面的外部 API 微调。
+
+| 用户组 | 主要关注点 |
+| --- | --- |
+| 开发者 | 文档更新、使用 bug 修复、错误消息变化 |
+| 集成方 | 文档更新、使用 bug 修复、错误消息变化 |
+| 审计方 | `minor` 或 `informational` 级补丁 |
+
+<h2 id="security-and-prereleases">安全与预发布版本</h2>
+
+### 安全问题
+
+随着 Vyper 演进，语言特性使用方式和编译器生成代码中都可能暴露安全漏洞。
+官方的处理方式是遵循其安全策略：
+
+- 安全策略：[Vyper Security Policy](https://github.com/vyperlang/vyper/security/policy)
+- 已公开安全通告：[Published Security Advisories](https://github.com/vyperlang/vyper/security/advisories?state=published)
+
+这些漏洞的修复也会反映在 release notes 中。
+
+### 预发布版本
+
+官方定义了以下预发布标记：
+
+- `-alpha.N`：工作进行中的版本。
+- `-beta.N`：计划最终发布的预览版本。
+- `-rc.N`：Major 版本前的候选版本。
+
+其中 `-rc.1` 通常会触发一次外部审计，后续 RC 可能继续吸收审计反馈。
+最后一个 RC 会成为下一个 Major 正式版本，并伴随完整审计报告一起发布。
+
+<h2 id="communication">PR 与发布沟通</h2>
+
+参考文档还给了两条协作约束：
+
+- Pull Request 应提交到 `master` 分支。
+- Major 和 Minor 版本应通过适当渠道对外沟通；Patch 通常不会专门宣发，除非有特别原因。
+
+如果你在维护依赖 Vyper 的工具链，最实用的做法是：
+
+- 把 Major 当作潜在迁移项目看待。
+- 把 Minor 当作“需要认真读发布说明”的升级。
+- 把 Patch 当作“可以较快跟进，但仍要看变更说明”的升级。

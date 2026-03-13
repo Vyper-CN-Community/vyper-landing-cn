@@ -1,68 +1,350 @@
 <Lead>
   Vyper 是静态类型语言。变量、参数和返回值的类型必须在编译期明确，
-  这使得很多模糊行为在进入链上之前就会被拦住。
+  这使得很多模糊行为在进入链上之前就会被拦住。值在赋值和传参时总是按值复制，
+  调用方永远不需要担心被调用方修改了传入的数据结构。
 </Lead>
 
 <h2 id="type-discipline">静态类型约束</h2>
 
-`refer/docs/types.rst` 强调了一个核心点：Vyper 没有“模糊子类型层级”。
-值在赋值和传参时都按值复制，这能减少调用方对共享可变状态的猜测。
+Vyper 没有"模糊子类型层级"。类型之间不存在隐式继承关系，
+每个值都必须通过显式的 `convert()` 来进行类型转换。
 
-你可以把它理解为：
+核心原则：
 
 - 类型越明确，调用边界越清晰。
-- 编译器知道得越多，运行时越不容易出现“看起来能跑，实际上有坑”的情况。
+- 编译器知道得越多，运行时越不容易出现意外行为。
 - 显式转换优先于隐式魔法。
 
-<h2 id="scalar-types">标量类型</h2>
+<Callout title="关于可变性">
+  内部函数的参数和局部变量可以被重新赋值（同类型），数组和结构体也支持就地修改成员。
+  但外部函数的参数是不可变的——既不能重新赋值，也不能修改成员。
+</Callout>
 
-最常见的基础类型包括：
+### Boolean
 
-| 类型 | 说明 |
+**关键字：** `bool`
+
+布尔值只有 `True` 和 `False` 两个取值。
+
+| 运算符 | 说明 |
 | --- | --- |
-| `bool` | 只有 `True` 和 `False`。 |
-| `intN` | 有符号整数，`N` 为 8 到 256 的 8 倍数。 |
-| `uintN` | 无符号整数，适合金额、索引和计数。 |
-| `decimal` | 十进制定点数，需要显式启用 decimal 支持。 |
-| `address` | 20 字节地址值。 |
-| `Bytes[N]` / `String[N]` | 定长上限的字节串与字符串。 |
+| `not x` | 逻辑取反 |
+| `x and y` | 逻辑与 |
+| `x or y` | 逻辑或 |
+| `x == y` | 相等 |
+| `x != y` | 不等 |
 
-示例：
+`and` 和 `or` 遵循短路求值，与 Python 行为一致。
+
+### 有符号整数（intN）
+
+**关键字：** `intN`（例如 `int128`）
+
+可存储正数和负数。`N` 是 8 到 256 之间的 8 的倍数。
+取值范围为 -2^(N-1) 到 2^(N-1) - 1。
 
 ```vyper
-is_active: bool = True
-counter: uint256 = 0
 delta: int128 = -5
-price: decimal = 0.1
-recipient: address = 0x1234567890123456789012345678901234567890
+big: int256 = -999999999
 ```
+
+**比较运算符：** `<`、`<=`、`==`、`!=`、`>=`、`>`（两端必须类型相同）
+
+**算术运算符：**
+
+| 运算符 | 说明 |
+| --- | --- |
+| `x + y` | 加法 |
+| `x - y` | 减法 |
+| `-x` | 取负 |
+| `x * y` | 乘法 |
+| `x // y` | 整数除法 |
+| `x ** y` | 指数运算 |
+| `x % y` | 取模 |
+
+**位运算符：** `&`、`|`、`^`（两端必须类型相同）
+
+**移位运算符：** `<<`、`>>`（仅对 `int256` 可用，`y` 为无符号整数。`int256` 的右移会编译为 EVM 的 `SAR` 有符号右移指令）
+
+<Callout title="整数除法的舍入方向">
+  Vyper 的整数除法向零舍入，这与 Python 不同（Python 向负无穷舍入）。
+  例如 `-1 // 2` 在 Vyper 中返回 `0`，在 Python 中返回 `-1`。
+  这一设计保证了 `(x // y) * y + (x % y) == x` 恒成立。
+</Callout>
+
+### 无符号整数（uintN）
+
+**关键字：** `uintN`（例如 `uint256`、`uint8`）
+
+只能存储非负整数。`N` 是 8 到 256 之间的 8 的倍数。
+取值范围为 0 到 2^N - 1。
+
+```vyper
+counter: uint256 = 0
+small: uint8 = 255
+```
+
+运算符与有符号整数相同，额外支持 `~x`（按位取反，目前仅 `uint256` 可用）。
+
+移位运算仅对 `uint256` 可用，右移编译为 EVM 的 `SHR` 无符号右移指令。
+
+<Callout title="字面量的默认类型">
+  整数字面量默认被解释为 `int256`。当赋值目标类型明确时（例如 `x: uint8 = 1`），
+  编译器会自动适配。如需显式指定，使用 `convert(literal, uint8)`。
+</Callout>
+
+### Decimal（十进制定点数）
+
+**关键字：** `decimal`
+
+从 v0.4.0 起，使用 decimal 需要通过 CLI 标志 `--enable-decimals` 显式启用。
+
+精度为 10 位小数。ABI 类型为 `int168`。
+字面量必须包含小数点才能被解释为 `decimal`。
+
+```vyper
+price: decimal = 0.1
+rate: decimal = 3.14
+```
+
+**算术运算符：** `+`、`-`、`-x`（取负）、`*`、`/`（注意是十进制除法，不是整数除法）、`%`
+
+比较运算符与整数类型一致。
+
+### Address
+
+**关键字：** `address`
+
+存储一个 20 字节的以太坊地址。地址字面量必须使用 `0x` 前缀的十六进制格式，并通过 EIP-55 校验和验证。
+
+```vyper
+owner: address = 0x1234567890123456789012345678901234567890
+```
+
+#### 地址成员
+
+| 成员 | 类型 | 说明 |
+| --- | --- | --- |
+| `balance` | `uint256` | 地址余额 |
+| `codehash` | `bytes32` | 地址上代码的 keccak 哈希（无合约时返回特定常量值） |
+| `codesize` | `uint256` | 部署代码的字节大小 |
+| `is_contract` | `bool` | 地址上是否部署了合约 |
+| `code` | `Bytes` | 合约字节码 |
+
+访问方式：`_address.balance`、`_address.codesize` 等。
+
+<Callout title="注意">
+  `SELFDESTRUCT` 和 `CREATE2` 可以移除或替换某个地址上的字节码。
+  不要假设地址成员值永远不变。`_address.code` 需要配合 `slice()` 使用来截取特定片段。
+</Callout>
+
+### 固定字节数组（bytesM）
+
+**关键字：** `bytesM`（例如 `bytes32`、`bytes4`）
+
+M 字节宽的固定大小字节数组。在 ABI 层表示为 `bytesM`。
+
+```vyper
+hash: bytes32
+some_method_id: bytes4 = 0x01abcdef
+```
+
+常用操作包括 `keccak256(x)`、`concat(x, ...)`、`slice(x, start, length)`。
+
+### 动态字节数组（Bytes）
+
+**关键字：** `Bytes`
+
+语法为 `Bytes[maxLen]`，其中 `maxLen` 是最大字节数。ABI 层表示为 `bytes`。
+
+```vyper
+bytes_string: Bytes[100] = b"\x01"
+hex_bytes: Bytes[100] = x"01"
+```
+
+### 字符串（String）
+
+**关键字：** `String`
+
+固定最大长度的字符串类型。实际内容可以短于最大长度。ABI 层表示为 `string`。
+
+```vyper
+example_str: String[100] = "Test String"
+```
+
+### Flag（标志枚举）
+
+**关键字：** `flag`
+
+自定义枚举类型，至少 1 个成员，最多 256 个。
+成员值为 `uint256`，形式为 2^n，其中 n 为成员在 0 到 255 范围内的索引。
+
+```vyper
+flag Roles:
+    ADMIN
+    USER
+
+role: Roles = Roles.ADMIN
+```
+
+**比较运算符：** `==`、`!=`、`in`、`not in`
+
+**位运算符：** `&`、`|`、`^`、`~`
+
+成员组合可以通过位运算操作。`in` 和 `not in` 可以检查成员是否存在于某个组合中：
+
+```vyper
+flag Roles:
+    MANAGER
+    ADMIN
+    USER
+
+@external
+def foo(a: Roles) -> bool:
+    return a in (Roles.MANAGER | Roles.USER)
+```
+
+<Callout title="in 与 == 的区别">
+  `in` 检查两个 flag 对象是否有任何共同设置的位，而 `==` 检查两个 flag 对象是否逐位完全相同。
+</Callout>
+
+位运算还可用于添加和撤销权限：
+
+```vyper
+@external
+def add_user(a: Roles) -> Roles:
+    ret: Roles = a
+    ret |= Roles.USER     # 设置 USER 位为 1
+    return ret
+
+@external
+def revoke_user(a: Roles) -> Roles:
+    ret: Roles = a
+    ret &= ~Roles.USER    # 设置 USER 位为 0
+    return ret
+```
+
+<h2 id="scalar-types">标量类型速查</h2>
+
+以下是所有基础标量类型的快速参考：
+
+| 类型 | 说明 | 默认值 |
+| --- | --- | --- |
+| `bool` | 布尔值，`True` 或 `False` | `False` |
+| `intN` | 有符号整数，N 为 8~256 的 8 倍数 | `0` |
+| `uintN` | 无符号整数，N 为 8~256 的 8 倍数 | `0` |
+| `decimal` | 十进制定点数，10 位精度 | `0.0` |
+| `address` | 20 字节以太坊地址 | `0x000...000` |
+| `bytesM` | M 字节固定字节数组（M 为 1~32） | 全零 |
+| `Bytes[N]` | 最大 N 字节的动态字节数组 | 全零 |
+| `String[N]` | 最大 N 字符的字符串 | 空 |
 
 <h2 id="collections">集合类型</h2>
 
-Vyper 的集合类型也强调“边界必须已知”：
+### 固定长度数组
+
+语法为 `_name: _ValueType[_Integer]`（不支持 `Bytes[N]`、`String[N]` 和 flag 作为元素类型）。
 
 ```vyper
-balances: HashMap[address, uint256]
-recent_scores: DynArray[uint256, 32]
-fixed_slots: uint256[8]
+exampleList: int128[3]
 
-struct User:
-    owner: address
-    points: uint256
+# 赋值
+exampleList = [10, 11, 12]
+exampleList[2] = 42
+
+# 访问
+return exampleList[0]
 ```
 
-- `HashMap` 适合无界键值访问。
-- `DynArray[T, N]` 允许动态长度，但最大容量必须提前声明。
-- 固定数组更容易推导 gas 行为。
-- `struct` 用于组织相关字段，增强可读性。
+多维数组的声明顺序与访问顺序是反过来的：
 
-<Callout title="为什么要强制上界">
-  无上界的数据结构会让 gas 成本和执行路径变得难以预测。Vyper 通过类型系统把这种风险提前收窄。
+```vyper
+# 声明：2 行 5 列
+exampleList2D: int128[5][2] = empty(int128[5][2])
+
+# 访问：[行索引][列索引]
+exampleList2D[0][4] = 42
+```
+
+<Callout title="安全提示">
+  在存储中定义大小远超 2^64 的数组可能因溢出风险导致安全漏洞。
+</Callout>
+
+### 动态数组（DynArray）
+
+运行时可变长度的有界数组，声明语法为 `DynArray[_Type, _Integer]`。
+
+```vyper
+exampleList: DynArray[int128, 3]
+
+exampleList = []
+exampleList.append(42)     # 长度变为 1
+exampleList.append(120)    # 长度变为 2
+exampleList.append(356)    # 长度变为 3
+# exampleList.append(1)   # 会 revert！已满
+
+myValue: int128 = exampleList.pop()  # myValue == 356，长度变为 2
+```
+
+关键限制：
+
+- 越界访问、对空数组 `pop()` 或对满数组 `append()` 都会触发 `REVERT`。
+- 迭代数组时不能修改数组内容。
+- ABI 表示为 `_Type[]`，例如 `DynArray[int128, 3]` 表示为 `int128[]`。
+
+### Struct（结构体）
+
+自定义复合类型，可组合多个字段。结构体可嵌套数组和其他结构体，但不能包含映射。
+
+```vyper
+struct MyStruct:
+    value1: int128
+    value2: decimal
+
+exampleStruct: MyStruct = MyStruct(value1=1, value2=2.0)
+exampleStruct.value1 = 1
+```
+
+### HashMap（映射）
+
+哈希表类型，虚拟初始化为所有可能的键都映射到类型的零值。键的数据本身不存储，
+只用其 `keccak256` 哈希来查找值。
+
+```vyper
+exampleMapping: HashMap[int128, decimal]
+exampleMapping[0] = 10.1
+```
+
+- `_KeyType` 可以是任何基础类型或字节类型，不支持映射、数组或结构体作为键。
+- `_ValueType` 可以是任何类型，包括映射（嵌套映射）。
+- 映射只能作为状态变量声明。
+- 映射没有"长度"概念，不能被迭代。
+
+### 初始值
+
+Vyper 没有 `null` 概念。每种类型都有默认的零值。
+检查变量是否为空需要与对应类型的默认值比较。
+使用内建的 `empty()` 函数可以将变量重置为默认值。
+
+| 类型 | 默认值 |
+| --- | --- |
+| `address` | `0x0000000000000000000000000000000000000000` |
+| `bool` | `False` |
+| `bytes32` | `0x00...00`（64 个零） |
+| `decimal` | `0.0` |
+| `uint8` | `0` |
+| `int128` | `0` |
+| `int256` | `0` |
+| `uint256` | `0` |
+
+<Callout title="内存变量必须初始化">
+  内存变量在声明时必须赋初始值。引用类型的所有成员会被递归初始化为各自的默认值。
 </Callout>
 
 <h2 id="conversion-rules">转换规则</h2>
 
-Vyper 对潜在有损或语义差异明显的转换要求显式 `convert()`：
+Vyper 的所有类型转换必须通过 `convert(a, btype)` 显式完成。
+转换被设计为安全且直观的——所有转换都会检查输入是否在输出类型的有效范围内。
 
 ```vyper
 x: uint256 = 100
@@ -72,9 +354,25 @@ who: address = 0x1234567890123456789012345678901234567890
 who_as_num: uint160 = convert(who, uint160)
 ```
 
-实践上可以记住这条简单规则：
+### 转换原则
 
-- 自动放宽通常可以接受，例如较小无符号整数向较大整数扩展。
-- 只要涉及地址、符号位、精度或截断风险，就写 `convert()`。
+核心规则总结：
 
-这样做虽然多敲一点字，但能显著降低审计时的歧义。
+| 规则 | 说明 |
+| --- | --- |
+| 位保留 | 除涉及 decimal 和 bool 的转换外，输入的位表示被原样保留 |
+| Bool 转换 | 所有非零输入映射为 `True`（1） |
+| Decimal → 整数 | 向零截断 |
+| Address 处理 | 地址被视为 `uint160`，但不允许与有符号整数或 decimal 互转 |
+| 右填充 ↔ 左填充 | `bytes`/`Bytes`/`String`（右填充）与左填充类型之间的转换会旋转字节 |
+| 有符号 ↔ 无符号 | 输入为负数时会 revert |
+| 窄化转换 | 例如 `int256 → int128` 会检查输入是否在目标范围内 |
+| 字节 → 有符号整数 | 会进行符号扩展，例如 `bytes1` 的 `0xff` 转为 `int8` 返回 `-1` |
+| 跨宽度字节/整数转换 | 先经过最近的整数类型，例如 `bytes1 → int16` 等同于 `bytes1 → int8 → int16` |
+| Flag 转换 | 只能与 `uint256` 互相转换 |
+
+<Callout title="实践建议">
+  对不会损失精度的放宽转换（例如 `uint8 → uint256`）通常可以自动完成。
+  只要涉及地址、符号位、精度或截断风险，就显式写 `convert()`。
+  这虽然多敲几个字，但能显著降低审计时的歧义。
+</Callout>

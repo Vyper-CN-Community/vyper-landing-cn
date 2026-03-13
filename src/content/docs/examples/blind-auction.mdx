@@ -1,0 +1,139 @@
+<Lead>
+  盲拍合约：参与者提交加密出价，竞价结束后进入揭示阶段，最终确定最高出价者。
+</Lead>
+
+<Callout title="学习用途">
+  本示例仅用于学习目的。请勿在未经充分审查和测试的情况下用于生产环境。
+</Callout>
+
+<h2 id="overview">概览</h2>
+
+与公开拍卖不同，盲拍分为两个阶段：
+
+1. **竞价阶段**：参与者提交加密的出价哈希（`keccak256` 编码的价格 + 是否虚假标记 + 密钥）
+2. **揭示阶段**：参与者揭示真实出价，合约验证哈希匹配后确定有效出价
+
+这种设计消除了竞价末期的时间压力，因为出价在揭示前是保密的。由于 Vyper 不支持动态数组，每个地址最多可提交 128 个出价。
+
+<h2 id="contract-code">完整合约代码</h2>
+
+```vyper
+#pragma version >0.3.10
+
+# Blind Auction
+
+struct Bid:
+  blindedBid: bytes32
+  deposit: uint256
+
+MAX_BIDS: constant(int128) = 128
+
+event AuctionEnded:
+    highestBidder: address
+    highestBid: uint256
+
+beneficiary: public(address)
+biddingEnd: public(uint256)
+revealEnd: public(uint256)
+
+ended: public(bool)
+
+highestBid: public(uint256)
+highestBidder: public(address)
+
+bids: HashMap[address, Bid[128]]
+bidCounts: HashMap[address, int128]
+
+pendingReturns: HashMap[address, uint256]
+
+@deploy
+def __init__(_beneficiary: address, _biddingTime: uint256, _revealTime: uint256):
+    self.beneficiary = _beneficiary
+    self.biddingEnd = block.timestamp + _biddingTime
+    self.revealEnd = self.biddingEnd + _revealTime
+
+@external
+@payable
+def bid(_blindedBid: bytes32):
+    assert block.timestamp < self.biddingEnd
+    numBids: int128 = self.bidCounts[msg.sender]
+    assert numBids < MAX_BIDS
+    self.bids[msg.sender][numBids] = Bid(
+        blindedBid=_blindedBid,
+        deposit=msg.value
+        )
+    self.bidCounts[msg.sender] += 1
+
+@internal
+def placeBid(bidder: address, _value: uint256) -> bool:
+    if (_value <= self.highestBid):
+        return False
+    if (self.highestBidder != empty(address)):
+        self.pendingReturns[self.highestBidder] += self.highestBid
+    self.highestBid = _value
+    self.highestBidder = bidder
+    return True
+
+@external
+def reveal(_numBids: int128, _values: uint256[128], _fakes: bool[128], _secrets: bytes32[128]):
+    assert block.timestamp > self.biddingEnd
+    assert block.timestamp < self.revealEnd
+    assert _numBids == self.bidCounts[msg.sender]
+
+    refund: uint256 = 0
+    for i: int128 in range(MAX_BIDS):
+        if (i >= _numBids):
+            break
+        bidToCheck: Bid = (self.bids[msg.sender])[i]
+        value: uint256 = _values[i]
+        fake: bool = _fakes[i]
+        secret: bytes32 = _secrets[i]
+        blindedBid: bytes32 = keccak256(concat(
+            convert(value, bytes32),
+            convert(fake, bytes32),
+            secret
+        ))
+        assert blindedBid == bidToCheck.blindedBid
+        refund += bidToCheck.deposit
+        if (not fake and bidToCheck.deposit >= value):
+            if (self.placeBid(msg.sender, value)):
+                refund -= value
+        zeroBytes32: bytes32 = empty(bytes32)
+        bidToCheck.blindedBid = zeroBytes32
+
+    if (refund != 0):
+        send(msg.sender, refund)
+
+@external
+def withdraw():
+    pendingAmount: uint256 = self.pendingReturns[msg.sender]
+    if (pendingAmount > 0):
+        self.pendingReturns[msg.sender] = 0
+        send(msg.sender, pendingAmount)
+
+@external
+def auctionEnd():
+    assert block.timestamp > self.revealEnd
+    assert not self.ended
+    log AuctionEnded(highestBidder=self.highestBidder, highestBid=self.highestBid)
+    self.ended = True
+    send(self.beneficiary, self.highestBid)
+```
+
+<h2 id="walkthrough">代码解析</h2>
+
+### 数据结构
+
+`Bid` 结构体包含加密出价哈希和押金。使用固定大小数组 `Bid[128]` 限制每个地址的最大出价数。
+
+### 竞价阶段（bid）
+
+参与者提交 `keccak256(concat(convert(value, bytes32), convert(fake, bytes32), secret))` 作为加密出价，同时附带押金。押金可以大于实际出价（用于隐藏真实金额），也可以设置 `fake=True` 来提交虚假出价。
+
+### 揭示阶段（reveal）
+
+参与者提供所有出价的原始值、虚假标记和密钥。合约重新计算哈希并验证匹配。对于有效的非虚假出价，如果成为最高出价，则扣除对应金额；其余作为退款返还。
+
+### 内部函数 placeBid
+
+遵循提款模式：如果新出价更高，将前最高出价者的资金记入 `pendingReturns`，而非直接发送。

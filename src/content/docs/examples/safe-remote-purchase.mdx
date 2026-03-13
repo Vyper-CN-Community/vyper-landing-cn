@@ -1,0 +1,87 @@
+<Lead>
+  安全远程购买合约：通过双方押金机制确保买卖双方在无信任环境下完成交易。
+</Lead>
+
+<Callout title="学习用途">
+  本示例仅用于学习目的。请勿在未经充分审查和测试的情况下用于生产环境。
+</Callout>
+
+<h2 id="overview">概览</h2>
+
+交易流程：
+1. 卖方发布商品并提交双倍商品价值的押金（余额 = 2x）
+2. 买方以商品价值购买并额外提交等额押金（余额 = 4x）
+3. 卖方发货
+4. 买方确认收货 — 买方退还押金（x），卖方退还押金（2x）+ 商品价值（x）
+
+<h2 id="contract-code">完整合约代码</h2>
+
+```vyper
+#pragma version >0.3.10
+
+# Safe Remote Purchase
+
+value: public(uint256)
+seller: public(address)
+buyer: public(address)
+unlocked: public(bool)
+ended: public(bool)
+finalized: public(bool)
+
+@deploy
+@payable
+def __init__():
+    assert (msg.value % 2) == 0
+    assert msg.value > 0
+    self.value = msg.value // 2
+    self.seller = msg.sender
+    self.unlocked = True
+
+@external
+def abort():
+    assert not self.finalized
+    assert self.unlocked
+    assert msg.sender == self.seller
+    self.finalized = True
+    assert self.balance > 0 and self.balance == 2 * self.value
+    send(self.seller, self.balance)
+
+@external
+@payable
+def purchase():
+    assert not self.finalized
+    assert self.unlocked
+    assert msg.value == (2 * self.value)
+    self.buyer = msg.sender
+    self.unlocked = False
+
+@external
+def received():
+    assert not self.finalized
+    assert not self.unlocked
+    assert msg.sender == self.buyer
+    assert not self.ended
+    self.ended = True
+    self.finalized = True
+    send(self.buyer, self.value)
+    assert self.balance == 3 * self.value
+    send(self.seller, self.balance)
+```
+
+<h2 id="walkthrough">代码解析</h2>
+
+### 押金机制
+
+构造函数要求卖方发送偶数金额的 ETH 作为双倍押金。`value` 存储商品的实际价值（发送金额的一半）。
+
+### abort() — 取消交易
+
+仅卖方可在买方购买前取消，退回全部押金。
+
+### purchase() — 买方购买
+
+买方必须发送恰好双倍商品价值的 ETH（一份是商品价格，一份是押金）。购买后合约锁定。
+
+### received() — 确认收货
+
+买方确认收货后，合约按规则分配资金：买方拿回押金（1x），卖方拿回押金加商品价值（3x）。

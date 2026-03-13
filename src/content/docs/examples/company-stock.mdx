@@ -1,0 +1,143 @@
+<Lead>
+  公司股票合约：模拟股票发行、买卖、转让和公司付款的简化金融系统。
+</Lead>
+
+<Callout title="学习用途">
+  本示例仅用于学习目的。请勿在未经充分审查和测试的情况下用于生产环境。
+</Callout>
+
+<h2 id="overview">概览</h2>
+
+这个合约模拟了一个简化的公司股票系统：
+
+- 公司初始持有所有股票
+- 用户可以用 ETH 按固定价格购买股票
+- 股东可以回售股票换回 ETH
+- 股东之间可以直接转让股票
+- 公司可以用合约余额支付账单
+
+<h2 id="contract-code">完整合约代码</h2>
+
+```vyper
+#pragma version >0.3.10
+
+event Transfer:
+    sender: indexed(address)
+    receiver: indexed(address)
+    value: uint256
+
+event Buy:
+    buyer: indexed(address)
+    buy_order: uint256
+
+event Sell:
+    seller: indexed(address)
+    sell_order: uint256
+
+event Pay:
+    vendor: indexed(address)
+    amount: uint256
+
+company: public(address)
+totalShares: public(uint256)
+price: public(uint256)
+
+holdings: HashMap[address, uint256]
+
+@deploy
+def __init__(_company: address, _total_shares: uint256, initial_price: uint256):
+    assert _total_shares > 0
+    assert initial_price > 0
+    self.company = _company
+    self.totalShares = _total_shares
+    self.price = initial_price
+    self.holdings[self.company] = _total_shares
+
+@view
+@external
+def stockAvailable() -> uint256:
+    return self._stockAvailable()
+
+@external
+@payable
+def buyStock():
+    buy_order: uint256 = msg.value // self.price
+    assert self._stockAvailable() >= buy_order
+    self.holdings[self.company] -= buy_order
+    self.holdings[msg.sender] += buy_order
+    log Buy(buyer=msg.sender, buy_order=buy_order)
+
+@view
+@external
+def getHolding(_stockholder: address) -> uint256:
+    return self._getHolding(_stockholder)
+
+@view
+@external
+def cash() -> uint256:
+    return self.balance
+
+@external
+def sellStock(sell_order: uint256):
+    assert sell_order > 0
+    assert self._getHolding(msg.sender) >= sell_order
+    assert self.balance >= (sell_order * self.price)
+    self.holdings[msg.sender] -= sell_order
+    self.holdings[self.company] += sell_order
+    send(msg.sender, sell_order * self.price)
+    log Sell(seller=msg.sender, sell_order=sell_order)
+
+@external
+def transferStock(receiver: address, transfer_order: uint256):
+    assert transfer_order > 0
+    assert self._getHolding(msg.sender) >= transfer_order
+    self.holdings[msg.sender] -= transfer_order
+    self.holdings[receiver] += transfer_order
+    log Transfer(sender=msg.sender, receiver=receiver, value=transfer_order)
+
+@external
+def payBill(vendor: address, amount: uint256):
+    assert msg.sender == self.company
+    assert self.balance >= amount
+    send(vendor, amount)
+    log Pay(vendor=vendor, amount=amount)
+
+@view
+@external
+def debt() -> uint256:
+    return self._debt()
+
+@view
+@external
+def worth() -> uint256:
+    return self.balance - self._debt()
+
+@view
+@internal
+def _debt() -> uint256:
+    return (self.totalShares - self._stockAvailable()) * self.price
+
+@view
+@internal
+def _stockAvailable() -> uint256:
+    return self.holdings[self.company]
+
+@view
+@internal
+def _getHolding(_stockholder: address) -> uint256:
+    return self.holdings[_stockholder]
+```
+
+<h2 id="walkthrough">代码解析</h2>
+
+### 事件系统
+
+合约定义了四个事件（Transfer、Buy、Sell、Pay）用于链下监听交易活动。
+
+### 买卖机制
+
+`buyStock` 接收 ETH 按固定价格换算为股票数量（向下取整）。`sellStock` 反向操作，检查公司有足够 ETH 后回购股票。
+
+### 公司财务
+
+`debt()` 计算公司因售出股票产生的负债（已售股数 x 价格），`worth()` 返回净值（余额 - 负债）。`payBill` 仅允许公司地址调用。

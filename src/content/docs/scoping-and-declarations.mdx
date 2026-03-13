@@ -1,0 +1,246 @@
+<Lead>
+  `refer/docs/scoping-and-declarations.rst` 把 Vyper 的声明模型讲得很完整：
+  变量在哪声明、何时必须初始化、哪些名字不能重影，以及存储槽如何稳定布局。
+</Lead>
+
+<h2 id="variable-declaration">变量声明</h2>
+
+变量第一次被引用之前，必须先声明它的[类型](/docs/types)：
+
+```vyper
+data: int128
+```
+
+不同作用域下，初始化规则不同：
+
+- 存储变量：声明在模块作用域，不能在声明时直接赋初值。
+- 内存变量：声明在函数内部，必须在声明时赋初值。
+- calldata 变量：作为函数参数出现时，可以提供默认值。
+
+### 元组赋值
+
+Vyper 不能直接声明“元组类型”，但在某些赋值场景里可以使用字面量元组，
+最常见的是接收多返回值：
+
+```vyper
+@internal
+def foo() -> (int128, int128):
+    return 2, 3
+
+@external
+def bar():
+    a: int128 = 0
+    b: int128 = 0
+
+    (a, b) = self.foo()
+    a, b = self.foo()
+```
+
+<h2 id="public-and-immutable">`public` 与 `immutable`</h2>
+
+### `public`
+
+存储变量声明时可以标记为 `public`：
+
+```vyper
+data: public(int128)
+```
+
+编译器会自动为它生成 getter。上面的写法等价于“声明一个状态变量 `data`，
+并额外生成一个返回 `int128` 的外部函数 `data()`”。
+
+对于公共数组，自动 getter 只能读取单个元素，而不能一次性返回整个数组，
+这样可以避免返回整数组带来的高 gas 成本：
+
+```vyper
+values: public(uint256[3])
+```
+
+这里自动 getter 的调用形式类似 `values(0)`。
+
+### `immutable`
+
+变量也可以声明为 `immutable`：
+
+```vyper
+OWNER: immutable(address)
+
+@deploy
+def __init__(owner: address):
+    OWNER = owner
+```
+
+`immutable` 与常量很像，但它的值是在构造阶段写入，而不是在源码里直接固定。
+约束是：
+
+- 必须在构造期间赋值。
+- 部署完成后不能再次赋值。
+- 它适合“部署时决定、部署后不变”的配置。
+
+编译器生成创建代码时，会在返回运行时代码之前，把所有 `immutable` 的值追加到运行时代码中。
+因此，如果你拿编译器输出的 runtime bytecode 与链上实际 bytecode 做逐字节比较，
+需要把这一步差异考虑进去。
+
+<h2 id="storage-layout">存储布局</h2>
+
+Vyper 会把存储变量分配到确定的 storage slot 中。默认情况下，第一项从 `slot 0` 开始，
+后续变量按顺序继续分配。
+
+升级合约时，经常需要显式覆盖这个布局，确保旧合约和新合约把同一个变量放在同一个 slot。
+Vyper 通过 `--storage-layout-file` 支持这一点。
+
+旧合约：
+
+```vyper
+# old_contract.vy
+owner: public(address)
+balanceOf: public(HashMap[address, uint256])
+```
+
+新合约：
+
+```vyper
+# new_contract.vy
+owner: public(address)
+minter: public(address)
+balanceOf: public(HashMap[address, uint256])
+```
+
+如果直接按默认顺序编译，`balanceOf` 会从旧合约的 `slot 1` 变成新合约的 `slot 2`，
+从而破坏升级兼容性。
+
+可以通过下面的方式固定布局：
+
+```bash
+vyper new_contract.vy --storage-layout-file new_contract_storage.json
+```
+
+```json
+{
+  "owner": { "type": "address", "n_slots": 1, "slot": 0 },
+  "minter": { "type": "address", "n_slots": 1, "slot": 2 },
+  "balanceOf": { "type": "HashMap[address, uint256]", "n_slots": 1, "slot": 1 }
+}
+```
+
+这里的 `n_slots` 表示从给定 `slot` 偏移开始，应该为该变量预留多少个 32 字节槽位。
+
+<h2 id="scoping-rules">作用域规则</h2>
+
+Vyper 采用 C99 风格作用域：变量从声明之后开始可见，直到包含该声明的最小代码块结束。
+
+### 模块作用域
+
+在代码块之外声明的内容，例如状态变量、函数、常量、事件和结构体，
+即使在源码里写在后面，也可以在前面被引用。
+
+函数内部访问模块作用域中的状态变量和函数时，要通过 `self`：
+
+```vyper
+a: int128
+
+@internal
+def foo() -> int128:
+    return 42
+
+@external
+def bar() -> int128:
+    b: int128 = self.foo()
+    return self.a + b
+```
+
+### 名称遮蔽
+
+内存变量和 calldata 变量不能与 `constant` 或 `immutable` 同名。
+下面两种情况都不会通过编译：
+
+```vyper
+a: constant(bool) = True
+
+@external
+def foo() -> bool:
+    a: bool = False
+    return a
+```
+
+```vyper
+a: immutable(bool)
+
+@deploy
+def __init__():
+    a = True
+
+@external
+def foo(a: bool) -> bool:
+    return a
+```
+
+### 函数作用域
+
+函数内声明的变量、以及函数参数，只在当前函数体中可见。
+不同函数里重复使用同名参数是允许的：
+
+```vyper
+@external
+def foo(a: int128):
+    pass
+
+@external
+def bar(a: uint256):
+    pass
+
+@external
+def baz():
+    a: bool = True
+```
+
+下面这些写法则会失败：
+
+```vyper
+@external
+def foo(a: int128):
+    a: int128 = 21
+```
+
+```vyper
+@external
+def foo(a: int128):
+    a = 4
+
+@external
+def bar():
+    a += 12
+```
+
+### 块级作用域
+
+`if` 和 `for` 创建的逻辑块也有各自的作用域。
+
+```vyper
+@external
+def foo(a: bool) -> int128:
+    if a:
+        x: int128 = 3
+    else:
+        x: bool = False
+```
+
+`for` 的目标变量只在循环内部存在：
+
+```vyper
+@external
+def foo(a: bool) -> int128:
+    for i: int128 in [1, 2, 3]:
+        pass
+    i: bool = False
+```
+
+下面的例子不会通过编译，因为循环里声明的 `a` 在循环外不可见：
+
+```vyper
+@external
+def foo(a: bool) -> int128:
+    for i: int128 in [1, 2, 3]:
+        a: int128 = i
+    a += 3
+```

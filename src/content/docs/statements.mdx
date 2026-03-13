@@ -1,0 +1,134 @@
+<Lead>
+  `refer/docs/statements.rst` 主要补齐了 Vyper 的基础语句模型：循环控制、事件日志、
+  以及 `raise` 和 `assert` 触发的异常语义。
+</Lead>
+
+<h2 id="control-flow">控制流语句</h2>
+
+Vyper 的语句风格和 Python 很接近，但会更强调“可静态分析”和“不会留下隐藏路径”。
+
+### `break`
+
+`break` 会终止最近一层 `for` 循环：
+
+```vyper
+for i: uint256 in [1, 2, 3, 4, 5]:
+    if i == a:
+        break
+```
+
+当 `i == a` 时，循环立即结束。
+
+### `continue`
+
+`continue` 会直接开始最近一层 `for` 循环的下一次迭代：
+
+```vyper
+for i: uint256 in [1, 2, 3, 4, 5]:
+    if i != a:
+        continue
+    ...
+```
+
+当条件不满足时，当前轮次后续逻辑不会执行。
+
+### `pass`
+
+`pass` 是空操作，占位但不执行任何代码：
+
+```vyper
+@external
+def foo():
+    pass
+```
+
+它适合在语法上需要语句、但实现暂时留空的地方使用。
+
+### `return`
+
+`return` 会结束当前函数调用，并把表达式列表作为返回值返回：
+
+```vyper
+return return_value
+```
+
+- 没有返回类型的函数可以省略 `return`。
+- 有返回类型的函数必须以 `return` 或其他终止动作（例如 `raise`）结束。
+- `return` 之后不能再写不可达语句，编译器会直接拒绝。
+
+<h2 id="log-statement">`log` 语句</h2>
+
+Vyper 使用 `log` 记录事件：
+
+```vyper
+log MyEvent(...)
+```
+
+对应事件必须先声明。一个最小示例：
+
+```vyper
+event Deposit:
+    sender: indexed(address)
+    amount: uint256
+
+@external
+@payable
+def deposit():
+    log Deposit(msg.sender, msg.value)
+```
+
+<Callout title="参数求值顺序">
+  传给 `log` 的参数求值顺序是未定义的。编译器可以按任意顺序计算这些表达式。
+  如果参数带有副作用，应先在独立语句中算好，再传给 `log`，避免行为依赖求值顺序。
+</Callout>
+
+<h2 id="exceptions">异常机制</h2>
+
+Vyper 使用会回滚状态的异常来处理错误。异常会触发 `REVERT` 操作码（`0xFD`），
+并把提供的 reason string 作为错误消息。
+
+当异常发生时：
+
+- 当前调用立即停止。
+- 合约状态回滚到交易执行前。
+- 剩余 gas 返还给调用者。
+- 如果错误发生在子调用里，会自动向上冒泡。
+
+有一个特殊例外：如果 reason string 被设置为 `UNREACHABLE`，编译器会使用 `INVALID`
+操作码（`0xFE`）而不是 `REVERT`。这种做法通常不建议在日常开发里使用，
+它主要用于兼容某些依赖 `INVALID` 做动态分析的工具链。
+
+<h2 id="assert-and-raise">`assert` 与 `raise`</h2>
+
+### `raise`
+
+`raise` 会主动抛出异常并回滚当前调用：
+
+```vyper
+raise "something went wrong"
+```
+
+错误字符串不是必填项；如果提供，长度上限为 1024 字节。
+
+### `assert`
+
+`assert` 用于声明某个条件必须成立，否则交易回滚：
+
+```vyper
+assert x > 5, "value too low"
+```
+
+错误字符串同样可选，长度上限也是 1024 字节。
+
+它的语义等价于：
+
+```vyper
+if not cond:
+    raise "reason"
+```
+
+实践上可以这样区分：
+
+- 用 `assert` 写必须成立的不变量、输入校验和权限前置条件。
+- 用 `raise` 表达“直接终止并返回错误”的显式分支。
+- 只在确实需要时才写错误字符串，保持错误信息稳定、可读且简短。

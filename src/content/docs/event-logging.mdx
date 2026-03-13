@@ -1,0 +1,108 @@
+<Lead>
+  `refer/docs/event-logging.rst` 解释了 Vyper 里的事件声明、日志写入和前端监听方式。
+  事件写入的是交易日志而不是合约存储，因此更便宜，但只能被链下客户端读取。
+</Lead>
+
+<h2 id="example-of-logging">日志记录示例</h2>
+
+下面这个例子来自官方 ERC20 示例，展示了事件从声明到写入的完整流程：
+
+```vyper
+event Transfer:
+    sender: indexed(address)
+    receiver: indexed(address)
+    value: uint256
+
+event Approval:
+    owner: indexed(address)
+    spender: indexed(address)
+    value: uint256
+
+@external
+def transfer(_to: address, _value: uint256) -> bool:
+    ...
+    log Transfer(sender=msg.sender, receiver=_to, value=_value)
+```
+
+这里发生了两件事：
+
+1. 合约先声明事件结构，说明哪些字段会被记录。
+2. 在业务逻辑完成后，用 `log` 把本次状态变化广播给链下监听者。
+
+前端或脚本可以通过 ABI 订阅这些事件。参考文档给出的 `web3.js` 监听方式如下：
+
+```javascript
+var abi = /* compiler generated ABI */
+var MyToken = web3.eth.contract(abi)
+var myToken = MyToken.at("0x1234...ab67")
+
+var event = myToken.Transfer(function (error, result) {
+  if (!error) {
+    var args = result.returnValues
+    console.log("value transferred =", args._amount)
+  }
+})
+```
+
+只要合约发出 `Transfer`，回调就会被触发。
+
+<h2 id="declaring-events">声明事件</h2>
+
+一个典型事件看起来像这样：
+
+```vyper
+event Transfer:
+    sender: indexed(address)
+    receiver: indexed(address)
+    value: uint256
+```
+
+EVM 底层提供 `LOG0` 到 `LOG4` 五个操作码来生成日志记录。
+每条日志由两部分组成：
+
+- `topics`：可检索的 32 字节主题，用于过滤和索引。
+- `data`：不可检索但更灵活的数据区，可以放字符串、数组等复杂值。
+
+在 Vyper 里，事件参数通常分成两类：
+
+- `indexed(...)` 参数：进入 topic，适合做地址、标识符等过滤条件。
+- 普通值参数：进入 data，适合传业务载荷。
+
+事件还会把“事件签名”编码进日志主题中，用于表明具体发生了哪个事件。
+如果事件没有任何参数，可以直接写成：
+
+```vyper
+event Foo: pass
+```
+
+<h2 id="logging-events">写入事件</h2>
+
+事件声明完成后，就可以在任意需要的位置多次写入日志：
+
+```vyper
+log Transfer(sender=msg.sender, receiver=_to, value=_value)
+```
+
+注意点有三个：
+
+- 传入的参数类型必须与事件声明完全匹配。
+- 如果使用关键字参数，顺序不影响结果。
+- 事件写入交易日志而不是 storage，通常比持久化状态便宜很多。
+
+但它的限制也很明确：合约本身不能读取过去写出的事件，只有链下客户端才能消费这些日志。
+
+<h2 id="listening-for-events">监听事件</h2>
+
+监听端在收到事件后，通常会拿到一整份结果对象。其中最常用的是 `result.returnValues`，
+它的字段名与事件里声明的普通值参数一致。
+
+需要注意的是：
+
+- `indexed` 字段主要用于订阅过滤条件。
+- 真正传给回调的值通常集中在 `returnValues` 中。
+- 客户端是否把 `indexed` 字段也映射到结果对象，取决于具体库的封装方式。
+
+实践上，事件最适合承担两类工作：
+
+- 给前端、索引器和分析脚本提供状态变化通知。
+- 在不增加链上读取成本的情况下，保留关键操作的审计轨迹。

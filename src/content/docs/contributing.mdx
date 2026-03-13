@@ -1,0 +1,68 @@
+<Lead>
+  `refer/docs/contributing.rst` 说明了如何为 Vyper 项目贡献代码、文档、讨论和问题报告。
+  如果你准备参与上游社区，这一页给出了最基础的协作规则。
+</Lead>
+
+<h2 id="types-of-contributions">贡献类型</h2>
+
+官方明确表示，以下几类贡献都很有价值：
+
+- 改进文档。
+- 在 StackExchange 和 GitHub Discussions 回答其他用户问题。
+- 参与 Vyper Discord 社区讨论。
+- 提出改进建议。
+- 修复并响应 GitHub issues。
+
+如果你刚接触 Vyper，先熟悉安装流程、编译流程和合约编写方式，会更容易进入贡献状态。
+
+<h2 id="suggesting-improvements">提出改进</h2>
+
+如果你要提出结构性改进，官方建议使用 Vyper Improvement Proposal，也就是 VIP。
+参考入口是官方仓库里的 VIP 模板：
+
+- [VIP 模板](https://github.com/vyperlang/vyper/blob/master/.github/ISSUE_TEMPLATE/vip.md)
+
+这类提案适合放语言设计、编译器行为或工作流层面的改动，不适合拿来报普通 bug。
+
+<h2 id="reporting-issues">报告问题</h2>
+
+提交 issue 时，官方建议至少包含以下信息：
+
+- 你使用的 Vyper 版本。
+- 相关源码片段。
+- 运行平台。
+- 操作系统名称与版本。
+- 复现步骤。
+- 实际结果。
+- 预期行为。
+
+能把问题最小化成一个可复现示例会非常有帮助，它不仅方便维护者定位问题，也经常能帮助你自己发现误解。
+
+问题入口：
+
+- [Vyper Issues](https://github.com/vyperlang/vyper/issues)
+
+<h2 id="pull-request-workflow">Pull Request 工作流</h2>
+
+提交代码贡献时，参考文档给出的要求包括：
+
+- 从 `master` 分支 fork 出自己的分支。
+- 提交信息不仅说明“改了什么”，也说明“为什么这样改”。
+- 如果需要同步上游 `master`，优先使用 `git rebase`，避免 `git merge`。
+- 新功能应补足相应的 `pytest` 测试，并放到 `tests/` 下。
+- 大改动最好先到 Discord 的 `#compiler-dev` 频道沟通。
+- 提 PR 之前，确保本地构建和支持的 Python 版本测试都能通过。
+
+### 提交信息
+
+官方文档还专门强调了 commit message 质量，并引用了这篇经典文章：
+
+- [How to Write a Git Commit Message](https://cbea.ms/git-commit/)
+
+如果使用上游仓库自带格式化脚本，原始流程是：
+
+1. 把提交信息写到文本文件里。
+2. 运行 `python fmt_commit_msg.py commitmsg.txt` 原地格式化。
+3. 把格式化后的内容放进 PR 描述，并用三反引号包起来。
+
+维护者在 squash merge 时会复用这段信息。

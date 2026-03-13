@@ -1,0 +1,158 @@
+<Lead>
+  `refer/docs/compiler-exceptions.rst` 汇总了 Vyper 编译阶段可能抛出的主要异常。
+  这些异常大多会附带源码高亮，方便你直接定位出错位置。
+</Lead>
+
+<h2 id="common-exceptions">常见编译异常</h2>
+
+只要编译器能定位到错误位置，异常信息通常都会带源码片段，例如：
+
+```text
+vyper.exceptions.VariableDeclarationException: line 79:17 Persistent variable undeclared: highstBid
+     78     # If bid is less than highest bid, bid fails
+---> 79     if (value <= self.highstBid):
+---------------------^
+     80         return False
+```
+
+下面是参考文档列出的主要异常类型：
+
+| 异常 | 说明 |
+| --- | --- |
+| `ArgumentException` | 调用函数时参数非法，例如位置参数数量不对，或关键字参数无效 |
+| `CallViolation` | 非法函数调用，例如在两个外部函数之间直接互相调用 |
+| `ArrayIndexException` | 数组索引越界 |
+| `EventDeclarationException` | 事件声明不合法 |
+| `EvmVersionException` | 合约中使用了当前 EVM 规则集不支持的行为 |
+| `FunctionDeclarationException` | 函数声明不合法，例如返回值定义错误或不匹配 |
+| `ImmutableViolation` | 试图修改不可修改的变量、常量或定义 |
+| `InterfaceViolation` | 接口没有被完整实现 |
+| `InvalidAttribute` | 引用了不存在的属性 |
+| `InvalidLiteral` | 字面量值无法匹配任何合法 Vyper 类型 |
+| `InvalidOperation` | 某个类型上使用了不支持的操作符 |
+| `InvalidReference` | 对已有定义的引用方式不合法 |
+| `InvalidType` | 值本身是合法字面量，但不能赋给当前目标类型 |
+| `IteratorException` | 迭代器构造或使用方式错误 |
+| `JSONError` | 编译器 JSON 输入格式不正确 |
+| `NamespaceCollision` | 试图使用一个已经占用的名字 |
+| `NatSpecSyntaxException` | [NatSpec 元数据](/docs/natspec)存在非法语法 |
+| `NonPayableViolation` | 在非 `@payable` 函数中访问了 `msg.value` |
+| `OverflowException` | 数值超出目标类型边界 |
+| `StateAccessViolation` | 在 `@view` 或 `@pure` 上下文里做了越权状态访问 |
+| `StructureException` | 语法虽然可解析，但结构上非法 |
+| `SyntaxException` | 无法被解析的语法错误 |
+| `TypeMismatch` | 两个或多个对象的类型不兼容 |
+| `UndeclaredDefinition` | 访问了尚未声明的对象 |
+| `VariableDeclarationException` | 变量声明不合法 |
+| `VersionException` | 版本字符串格式错误，或与当前编译器不兼容 |
+| `ZeroDivisionException` | 发生除零或模零 |
+
+### 典型示例
+
+#### `InvalidLiteral`
+
+```vyper
+#pragma enable-decimals
+
+@external
+def foo():
+    bar: decimal = 3.123456789123456789
+```
+
+这里字面量小数位数过多，无法分配给合法的 Vyper `decimal` 表示，因此会触发 `InvalidLiteral`。
+
+#### `InvalidOperation`
+
+```vyper
+@external
+def foo():
+    a: String[10] = "hello" * 2
+```
+
+字符串类型不支持乘法运算，所以这里会抛出 `InvalidOperation`。
+
+#### `InvalidReference`
+
+```vyper
+baz: int128
+
+@external
+def foo():
+    bar: int128 = baz
+```
+
+`baz` 是状态变量，函数里访问它必须写成 `self.baz`。直接写 `baz` 会触发 `InvalidReference`。
+
+#### `InvalidType`
+
+```vyper
+@external
+def foo():
+    bar: int128 = 3.5
+```
+
+`3.5` 是合法字面量，但它不能赋值给 `int128`，因此会得到 `InvalidType`。
+
+#### `NatSpecSyntaxException`
+
+```text
+vyper.exceptions.SyntaxException: line 14:5 No description given for tag '@param'
+     13     @dev the feet are sticky like rice
+---> 14     @param
+---------^
+     15     @return always True
+```
+
+`@param` 后必须跟参数名和描述，否则 NatSpec 解析会失败。
+
+#### `NonPayableViolation`
+
+```vyper
+@external
+def _foo():
+    bar: uint256 = msg.value
+```
+
+如果函数没有声明为 `@payable`，却读取了 `msg.value`，就会抛出 `NonPayableViolation`。
+
+#### `TypeMismatch`
+
+```vyper
+#pragma enable-decimals
+
+@external
+def foo():
+    bar: int128 = 3
+    baz: decimal = 4.2
+
+    if baz + bar > 4:
+        pass
+```
+
+这里 `bar` 是 `int128`，`baz` 是 `decimal`，两者直接相加会触发 `TypeMismatch`。
+
+#### `VariableDeclarationException`
+
+```text
+vyper.exceptions.VariableDeclarationException: line 79:17 Persistent variable undeclared: highstBid
+     78     # If bid is less than highest bid, bid fails
+---> 79     if (value <= self.highstBid):
+---------------------^
+     80         return False
+```
+
+这种错误常见于变量拼写错误、缺失声明，或把 storage / memory 变量写错位置。
+
+<h2 id="compiler-panic">CompilerPanic</h2>
+
+`CompilerPanic` 和上面的普通编译异常不同。它通常表示问题出在编译器内部，而不是你的合约源码本身：
+
+```text
+$ vyper v.vy
+Error compiling: v.vy
+vyper.exceptions.CompilerPanic: Number of times repeated
+must be a constant nonzero positive integer: 0 Please create an issue.
+```
+
+如果你遇到这类错误，官方建议直接到 Vyper GitHub 提交 issue，
+因为它意味着编译器在某个输入路径上出现了内部故障，而不仅仅是用户代码写错。

@@ -1,0 +1,39 @@
+<Lead>
+  名称注册表合约：将字节串名称映射到以太坊地址，每个名称只能注册一次。
+</Lead>
+
+<Callout title="学习用途">
+  本示例仅用于学习目的。请勿在未经充分审查和测试的情况下用于生产环境。
+</Callout>
+
+<h2 id="overview">概览</h2>
+
+一个简单的名称注册表，支持注册和查询。名称一旦注册就不能被覆盖——先到先得。
+
+<h2 id="contract-code">完整合约代码</h2>
+
+```vyper
+#pragma version >0.3.10
+
+registry: HashMap[Bytes[100], address]
+
+@external
+def register(name: Bytes[100], owner: address):
+    assert self.registry[name] == empty(address)  # check name has not been set yet.
+    self.registry[name] = owner
+
+@view
+@external
+def lookup(name: Bytes[100]) -> address:
+    return self.registry[name]
+```
+
+<h2 id="walkthrough">代码解析</h2>
+
+### 注册逻辑
+
+`register` 使用 `assert` 确保名称尚未被注册（值为零地址），然后将名称与地址关联。这是一个不可逆操作。
+
+### 查询
+
+`lookup` 是一个 `@view` 函数，返回名称对应的地址。如果名称未注册，返回零地址。

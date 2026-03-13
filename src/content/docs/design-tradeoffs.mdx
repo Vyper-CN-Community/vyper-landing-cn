@@ -1,53 +1,400 @@
 <Lead>
-  很多开发者第一次看 Vyper，会先注意到它“少了很多东西”。但从文档视角看，
+  很多开发者第一次看 Vyper，会先注意到它"少了很多东西"。但从安全角度看，
   这些缺失恰恰定义了 Vyper 的价值主张：减少容易出错的自由度，让合约行为更显式。
+  本页详细对比 Vyper 与 Solidity 的差异，并给出风格建议。
 </Lead>
 
 <h2 id="why-less-is-more">为什么更少即更多</h2>
 
-Vyper 在设计上持续围绕三个关键词展开：
+Vyper 在设计上持续围绕三个关键词展开：**安全性**、**简洁性**、**可审计性**。
 
-- 安全性
-- 简洁性
-- 可审计性
+为实现这些目标，Vyper 主动排除了那些虽然强大但会让控制流和状态边界变模糊的能力。
+每一项排除都是经过权衡的——以灵活性换取显式行为。
 
-因此它会主动移除那些虽然强大、但会让控制流和状态边界变模糊的能力。
-这不是为了限制开发者，而是为了让重要逻辑更接近“读代码就能看懂”的状态。
+### 快速对照表
+
+| Solidity | Vyper | 背后的理由 |
+| --- | --- | --- |
+| `modifier` | 内联 `assert` / `raise` | 检查逻辑留在函数体里，执行顺序更直观 |
+| 类继承 | `import` + `exports` | 显式依赖关系 |
+| `assembly { }` | 不支持 | 使用 `raw_call`、`create_minimal_proxy_to` 等内建函数 |
+| `while (true)` | `for i in range(n)` | 有界 gas 成本 |
+| `mapping` | `HashMap` | 语义相同 |
+| `emit Event()` | `log Event()` | 语义相同 |
+| `require()` | `assert` / `raise` | 不同语义，更显式的错误路径 |
+| `contract.call()` | `extcall` / `staticcall` | 显式外部调用 |
 
 <h2 id="solidity-comparison">与 Solidity 的核心差异</h2>
 
-| Solidity 习惯 | Vyper 做法 | 背后的理由 |
-| --- | --- | --- |
-| modifier | 内联 `assert` / `raise` | 检查逻辑留在函数体里，执行顺序更直观。 |
-| 继承 | `import` + `initializes` + `exports` | 组合关系更显式，没有线性化复杂度。 |
-| inline assembly | 内建低层函数 | 保留底层能力，但减少不可读 opcode 区域。 |
-| 无限循环 / 递归 | 有上界循环，不支持递归 | gas 成本更容易分析。 |
-| 隐式外部调用 | `extcall` / `staticcall` | 危险边界在语法上可见。 |
+### 没有 Modifier
 
-`refer/docs/solidity-differences.rst` 还强调了一点：Vyper 对类型转换更严格，
-这会让你多写一些 `convert()`，但也显著减少“调用点看不出风险”的情况。
+Solidity 的 modifier 可以在函数体前后执行代码、修改状态，理解一个函数需要去别处查找 modifier 定义：
 
-<h2 id="style-guidelines">风格建议</h2>
+```solidity
+modifier onlyOwner() {
+    require(msg.sender == owner, "Not owner");
+    _;
+}
 
-`refer/docs/style-guide.rst` 虽然主要写给 Vyper 编译器项目本身，但里面很多原则同样适用于合约代码：
+function withdraw() public onlyOwner {
+    // ...
+}
+```
 
-- 命名尽量短、明确、可搜索。
-- 布尔值优先使用正向命名，例如 `is_active`，避免双重否定。
-- 一个函数只负责一件事，让测试和审计都更集中。
-- 新能力上线时，同步补测试和文档，不要让“代码是真相，文档过期”长期存在。
+Vyper 将检查逻辑内联，控制流从上到下完全可见：
 
-对合约仓库来说，最重要的风格不是排版，而是结构是否稳定：文件职责清不清楚、命名能不能快速定位、失败路径是否明确。
+```vyper
+@external
+def withdraw():
+    assert msg.sender == self.owner, "Not owner"
+    # ...
+```
 
-<h2 id="documentation-habits">文档习惯</h2>
+### 没有类继承
 
-原始风格指南还给出了很实用的文档写作建议：
+Solidity 支持多重继承，带来了菱形问题和 C3 线性化复杂度。Vyper 完全排除继承。
 
-- 用现在时和祈使式描述 API 行为。
-- 保持术语前后一致。
-- 每段只讲一个主题。
-- 新功能不应脱离文档单独落地。
+从 0.4.0 起，Vyper 引入了模块系统实现强大的代码复用：
 
-<Callout title="落地方式">
-  最可靠的做法不是“最后补文档”，而是在新增模块、外部函数或底层调用时，
-  同步记录它的用途、权限边界和失败条件。这样文档才会真正服务于审计和维护。
+```vyper
+import ownable
+
+initializes: ownable
+exports: ownable.transfer_ownership
+
+@deploy
+def __init__():
+    ownable.__init__()
+```
+
+三个关键声明管理模块关系：
+- `initializes`：当前合约管理该模块的存储
+- `uses`：当前合约读取模块状态但不初始化
+- `exports`：将模块函数暴露到 ABI
+
+理解一个合约只需要读一个文件及其直接导入——依赖关系和对外暴露的函数都是显式的。
+
+### 没有内联汇编
+
+汇编绕过了编译器的安全检查：类型验证、溢出保护、内存安全。
+Vyper 通过显式的[内建函数](/docs/built-ins)提供底层访问：`raw_call`、`raw_create`、`create_minimal_proxy_to`、`create_from_blueprint`。
+
+### 没有函数重载
+
+Solidity 允许同名不同参数的多个函数。Vyper 要求唯一的函数名，
+保持 ABI 和调用点在审查时的明确性。
+
+### 没有运算符重载
+
+`a + b` 永远是算术加法。运算符不能为自定义类型重新定义，
+运算符行为在整个代码库中保持一致。
+
+### 没有无限循环和递归
+
+所有循环必须有编译期上界，函数不能直接或间接调用自身：
+
+```vyper
+for i: uint256 in range(100):
+    # 循环体
+
+for i: uint256 in range(count, bound=100):
+    # 变量上界，但编译期有 bound 限制
+```
+
+无界的存储迭代可能超过区块 gas 上限导致合约不可用。有界循环和无递归使得 gas 成本可静态分析——
+每个函数调用都有可计算的 gas 上界。
+
+### 有界动态数组
+
+存储数组需要编译时的最大大小：
+
+```vyper
+balances: DynArray[uint256, 100]
+```
+
+这保证了 gas 成本可预测并防止 DoS 攻击。对于无界集合，使用 `HashMap`。
+
+### 显式类型转换
+
+Vyper 允许安全的自动放宽（如 `uint8` → `uint256`），但对可能有损或语义重要的转换要求显式 `convert()`：
+
+```vyper
+x: uint256 = 100
+y: int256 = convert(x, int256)
+
+addr: address = 0x1234567890123456789012345678901234567890
+num: uint160 = convert(addr, uint160)
+```
+
+### 原生十进制定点数
+
+Vyper 内置 10 位精度的十进制定点运算：
+
+```vyper
+a: decimal = 0.1
+b: decimal = 0.2
+total: decimal = a + b  # 精确等于 0.3
+```
+
+`0.1` 和 `0.2` 在二进制浮点中无法精确表示，但 Vyper 的十进制类型能精确处理。
+Solidity 没有原生定点类型，需要手动整数缩放。
+
+### 边界检查
+
+数组访问和算术运算在运行时进行边界检查。越界访问 revert，整数溢出 revert。
+
+Solidity 0.8+ 提供类似保护但可在 `unchecked` 块中关闭。Vyper 无法关闭这些检查。
+需要回绕行为时使用显式的 `unsafe_*` 内建函数。
+
+### 重入保护
+
+内建 `@nonreentrant` 装饰器，编译器生成互斥锁，无需手动实现：
+
+```vyper
+@external
+@nonreentrant
+def withdraw():
+    # 不能被重入
+    ...
+```
+
+`extcall` 关键字使外部调用点在代码审查时显而易见。详见[函数与控制流](/docs/control-structures)。
+
+<h2 id="style-guidelines">语法对照与风格建议</h2>
+
+### 版本声明
+
+每个 Vyper 文件必须以版本 pragma 开头，文件扩展名为 `.vy`：
+
+```vyper
+#pragma version ^0.4.0
+```
+
+### 状态变量
+
+```solidity
+// Solidity
+uint256 public counter;
+address private owner;
+```
+
+```vyper
+# Vyper — 默认私有，用 public() 生成 getter
+counter: public(uint256)
+owner: address
+```
+
+### 函数声明
+
+```solidity
+// Solidity
+function deposit() external payable returns (uint256) {
+    return msg.value;
+}
+```
+
+```vyper
+# Vyper — 装饰器指定可见性和可变性
+@external
+@payable
+def deposit() -> uint256:
+    return msg.value
+```
+
+### 构造函数
+
+```solidity
+// Solidity
+constructor(address _owner) {
+    owner = _owner;
+}
+```
+
+```vyper
+# Vyper
+@deploy
+def __init__(owner: address):
+    self.owner = owner
+```
+
+### 事件
+
+```solidity
+// Solidity
+event Transfer(address indexed from, address indexed to, uint256 value);
+emit Transfer(msg.sender, to, amount);
+```
+
+```vyper
+# Vyper — log 替代 emit
+event Transfer:
+    sender: indexed(address)
+    receiver: indexed(address)
+    amount: uint256
+
+log Transfer(msg.sender, to, amount)
+```
+
+### 映射
+
+```solidity
+// Solidity
+mapping(address => uint256) public balances;
+mapping(address => mapping(address => uint256)) public allowances;
+```
+
+```vyper
+# Vyper
+balances: public(HashMap[address, uint256])
+allowances: public(HashMap[address, HashMap[address, uint256]])
+```
+
+### 接口
+
+```solidity
+// Solidity
+interface IERC20 {
+    function transfer(address to, uint256 amount) external returns (bool);
+}
+```
+
+```vyper
+# Vyper（内联声明）
+interface IERC20:
+    def transfer(to: address, amount: uint256) -> bool: nonpayable
+
+# 或导入内建接口
+from ethereum.ercs import IERC20
+```
+
+### 错误处理
+
+```solidity
+// Solidity
+require(amount > 0, "Amount must be positive");
+revert("Operation failed");
+```
+
+```vyper
+# Vyper
+assert amount > 0, "Amount must be positive"
+raise "Operation failed"
+```
+
+### Self 引用
+
+状态变量访问必须加 `self.` 前缀，使存储操作（成本更高）在审查时一目了然：
+
+```vyper
+self.counter = self.counter + 1
+```
+
+### 外部调用
+
+```solidity
+// Solidity
+IERC20(token).transfer(to, amount);
+uint256 balance = IERC20(token).balanceOf(address(this));
+```
+
+```vyper
+# Vyper — extcall/staticcall 显式标记外部调用
+extcall IERC20(token).transfer(to, amount)
+balance: uint256 = staticcall IERC20(token).balanceOf(self)
+```
+
+### 常量与 Immutable
+
+```solidity
+// Solidity
+uint256 constant FEE = 100;
+address immutable owner;
+constructor() { owner = msg.sender; }
+```
+
+```vyper
+# Vyper
+FEE: constant(uint256) = 100
+owner: immutable(address)
+
+@deploy
+def __init__():
+    owner = msg.sender
+```
+
+### 默认函数
+
+```solidity
+// Solidity — 两个独立函数
+fallback() external payable { }
+receive() external payable { }
+```
+
+```vyper
+# Vyper — 单一 __default__ 函数
+@external
+@payable
+def __default__():
+    pass
+```
+
+<h2 id="documentation-habits">编码风格与文档习惯</h2>
+
+以下原则来自 Vyper 编译器项目的风格指南，但同样适用于合约代码。
+
+### 命名规范
+
+- 模块名：全小写，可用下划线
+- 类名：大驼峰（CapWords）
+- 函数/方法名：小写加下划线
+- 常量：全大写加下划线
+- 布尔值：使用 `is_` 前缀（如 `is_active`），避免双重否定（不要 `is_not_set`）
+
+### 方法命名约定
+
+| 前缀 | 含义 |
+| --- | --- |
+| `get_` | 简单数据获取，无副作用 |
+| `fetch_` | 可能有副作用的获取 |
+| `build_` | 从其他数据创建新对象 |
+| `set_` | 添加或修改值 |
+| `add_` | 添加新属性（已存在则抛异常） |
+| `validate_` | 验证，无返回或抛异常 |
+| `compare_` | 比较，返回布尔值 |
+
+### 文档写作原则
+
+- 用祈使式现在时描述 API：用"返回"而非"返回了"
+- 术语前后保持一致
+- 避免模糊代词
+- 每段只讲一个主题，每句只讲一个想法
+- 新功能不应脱离文档单独落地
+
+### 测试原则
+
+- 每个测试验证单一行为
+- 测试之间不能有依赖关系
+- 优先使用参数化测试和基于属性的测试
+- 不使用 mock
+
+### 提交信息
+
+推荐遵循 [Conventional Commits](https://www.conventionalcommits.org/) 规范：
+
+```
+<type>[optional scope]: <description>
+
+[optional body]
+```
+
+常见类型：`fix`（补丁）、`feat`（新功能）、`docs`、`style`、`refactor`、`test`、`chore`。
+
+最佳实践：
+- 标题行限制 50 字符
+- 使用祈使式现在时
+- 正文解释"为什么"而非"怎么做"
+
+<Callout title="为什么选择 Vyper">
+  如果你有 Python 经验、希望编译器强制约束（无限循环、隐式转换、递归调用都不允许）、
+  偏好显式代码（大部分事情只有一种写法）、希望安全检查不能被全局关闭——Vyper 就是为你设计的。
 </Callout>

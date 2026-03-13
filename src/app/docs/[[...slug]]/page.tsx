@@ -14,19 +14,11 @@ function resolveSlug(slug?: string[]) {
     return ''
   }
 
-  if (slug.length > 1) {
-    return null
-  }
-
-  return slug[0]
+  return slug.join('/')
 }
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const resolvedSlug = resolveSlug((await params).slug)
-
-  if (resolvedSlug === null) {
-    return {}
-  }
 
   const doc = getDocBySlug(resolvedSlug)
 
@@ -47,16 +39,12 @@ export function generateStaticParams() {
   return docs
     .filter(doc => doc.slug)
     .map(doc => ({
-      slug: [doc.slug],
+      slug: doc.slug.split('/'),
     }))
 }
 
 export default async function DocsPage({ params }: PageProps) {
   const resolvedSlug = resolveSlug((await params).slug)
-
-  if (resolvedSlug === null) {
-    notFound()
-  }
 
   const doc = getDocBySlug(resolvedSlug)
 

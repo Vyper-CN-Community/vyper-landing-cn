@@ -1,0 +1,78 @@
+<Lead>
+  多签钱包合约：需要多个所有者的签名才能执行交易，展示 ecrecover 和 raw_call 的实际应用。
+</Lead>
+
+<Callout title="学习用途">
+  本示例仅用于学习目的。请勿在未经充分审查和测试的情况下用于生产环境。
+</Callout>
+
+<h2 id="overview">概览</h2>
+
+多签钱包是区块链安全的基石。这个合约要求至少 `threshold` 个所有者签名才能执行交易。核心机制：
+
+- 最多 5 个所有者
+- 使用 `ecrecover` 验证链下签名
+- 使用 `raw_call` 执行任意外部调用
+- 序列号防止签名重放
+
+<h2 id="contract-code">完整合约代码</h2>
+
+```vyper
+#pragma version >0.3.10
+
+owners: public(address[5])
+threshold: int128
+seq: public(int128)
+
+@deploy
+def __init__(_owners: address[5], _threshold: int128):
+    for i: uint256 in range(5):
+        if _owners[i] != empty(address):
+            self.owners[i] = _owners[i]
+    self.threshold = _threshold
+
+@external
+def testEcrecover(h: bytes32, v: uint8, r: bytes32, s: bytes32) -> address:
+    return ecrecover(h, v, r, s)
+
+@external
+@payable
+def approve(_seq: int128, to: address, _value: uint256, data: Bytes[4096], sigdata: uint256[3][5]) -> Bytes[4096]:
+    assert msg.value >= _value
+    approvals: int128 = 0
+    h: bytes32 = keccak256(concat(
+        convert(_seq, bytes32),
+        convert(to, bytes32),
+        convert(_value, bytes32),
+        data
+    ))
+    h2: bytes32 = keccak256(concat(b"\x19Ethereum Signed Message:\n32", h))
+    assert self.seq == _seq
+    for i: uint256 in range(5):
+        if sigdata[i][0] != 0:
+            assert ecrecover(h2, sigdata[i][0], sigdata[i][1], sigdata[i][2]) == self.owners[i]
+            assert ecrecover(h2, convert(sigdata[i][0], uint8), convert(sigdata[i][1], bytes32), convert(sigdata[i][2], bytes32)) == self.owners[i]
+            approvals += 1
+    assert approvals >= self.threshold
+    self.seq += 1
+    return raw_call(to, data, max_outsize=4096, gas=3_000_000, value=_value)
+
+@external
+@payable
+def __default__():
+    pass
+```
+
+<h2 id="walkthrough">代码解析</h2>
+
+### 签名验证
+
+`approve` 将交易参数（序列号、目标地址、金额、数据）进行 `keccak256` 哈希，然后用以太坊签名消息前缀包装。每个所有者的签名通过 `ecrecover` 恢复地址并与已知所有者对比。
+
+### 重放保护
+
+`seq` 序列号确保每个签名只能使用一次。每次成功执行后 `seq` 递增。
+
+### 任意调用
+
+通过 `raw_call` 实现对任意合约的调用，`max_outsize=4096` 和 `gas=3_000_000` 提供了足够的灵活性。`__default__` 函数标记为 `@payable` 允许钱包直接接收 ETH。

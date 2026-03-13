@@ -5,15 +5,39 @@
 
 <h2 id="visibility">函数可见性</h2>
 
-Vyper 常见的可见性有三种：
+Vyper 有三种可见性级别：
 
 | 标记 | 含义 |
 | --- | --- |
-| `@external` | 进入 ABI，可被外部调用。 |
-| `@internal` | 只在合约内部调用；从 0.4.0 起可以省略，未标注时默认为 internal。 |
-| `@deploy` | 部署阶段执行，通常只用于 `__init__()`。 |
+| `@external` | 进入 ABI 选择器表，可被外部交易或其他合约调用 |
+| `@internal`（默认） | 只在合约内部可用，外部调用者不可访问 |
+| `@deploy` | 构造阶段执行，目前仅用于 `__init__()` |
 
-示例：
+### 外部函数
+
+外部函数是合约接口的一部分，只能通过交易或外部合约调用。
+
+```vyper
+@external
+def add_seven(a: int128) -> int128:
+    return a + 7
+
+@external
+def add_with_default(a: uint256, b: uint256 = 3) -> uint256:
+    return a + b
+```
+
+一个 Vyper 合约不能在两个外部函数之间直接互调。如果确实需要，可以通过[接口](/docs/interfaces)实现。
+
+<Callout title="默认参数与 ABI">
+  对于带默认参数的外部函数（如 `def my_func(x: uint256, b: uint256 = 1)`），
+  编译器会基于 N 个默认参数生成 N+1 个重载函数选择器。
+  例如 `withdraw(uint256,address,address)` 和 `withdraw(uint256)` 是两个不同的选择器。
+</Callout>
+
+### 内部函数
+
+内部函数通过 `self` 对象调用：
 
 ```vyper
 def _times_two(amount: uint256) -> uint256:
@@ -24,34 +48,23 @@ def calculate(amount: uint256) -> uint256:
     return self._times_two(amount)
 ```
 
-<h2 id="mutability">函数可变性</h2>
-
-可变性标记描述函数是否读取状态、修改状态或接收 ETH：
-
-| 标记 | 含义 |
-| --- | --- |
-| `@pure` | 不读状态，也不读环境变量。 |
-| `@view` | 读状态，不改状态。 |
-| `@nonpayable` | 默认值；可读写状态，但不能接收 ETH。 |
-| `@payable` | 可读写状态，并能访问 `msg.value`。 |
+从导入模块调用内部函数时，使用模块名前缀：
 
 ```vyper
-@view
-@external
-def total() -> uint256:
-    return self.balance
+import calculator_library
 
-@payable
 @external
-def deposit():
-    self.balance += msg.value
+def calculate(amount: uint256) -> uint256:
+    return calculator_library._times_two(amount)
 ```
 
-`@view` 和 `@pure` 的意义不仅是文档说明，它们会影响底层调用方式和编译器检查强度。
+标记内部函数为 `@payable` 表示它可以访问 `msg.value`。一个 `@nonpayable` 的内部函数可以被外部 `@payable` 函数调用，但它自身无法访问 `msg.value`。
 
-<h2 id="constructor">构造函数</h2>
+从 v0.4.0 起，`@internal` 装饰器是可选的——没有可见性装饰器的函数默认为内部函数。
 
-构造函数写作 `__init__()`，并由 `@deploy` 标记：
+### 构造函数（__init__）
+
+`__init__()` 是特殊的初始化函数，仅在部署时调用一次。必须使用 `@deploy` 装饰器：
 
 ```vyper
 owner: address
@@ -61,39 +74,248 @@ def __init__():
     self.owner = msg.sender
 ```
 
-这一步通常用来：
+常见用途：
 
-- 初始化 owner 或管理员地址。
-- 设置 immutable 变量。
-- 调用已初始化模块的构造逻辑。
+- 初始化 owner 或管理员地址
+- 设置 immutable 变量（immutable 变量只能在构造函数中赋值）
+- 调用已初始化模块的构造逻辑
 
-<h2 id="loops-and-guards">循环与保护措施</h2>
+<h2 id="mutability">函数可变性</h2>
 
-Vyper 的循环必须有编译期可知的上界：
+可变性标记描述函数与状态和 ETH 的交互方式：
+
+| 标记 | 含义 |
+| --- | --- |
+| `@pure` | 不读合约状态，也不读环境变量 |
+| `@view` | 可读状态，不改状态 |
+| `@nonpayable`（默认） | 可读写状态，但不能接收 ETH |
+| `@payable` | 可读写状态，可接收和访问 `msg.value` |
 
 ```vyper
-for i: uint256 in range(100):
+@view
+@external
+def readonly():
+    # 不能写状态
     ...
 
-for i: uint256 in range(count, bound=100):
+@payable
+@external
+def send_me_money():
+    # 可以接收 ETH
     ...
 ```
 
-这直接排除了“无上界遍历把函数 gas 打爆”的一整类问题。
+- `@view` 函数不能调用可变（`@payable` 或 `@nonpayable`）函数。所有外部调用使用 `STATICCALL` 操作码。
+- `@pure` 函数不能调用非 `@pure` 函数。
+- 函数默认为 `@nonpayable`。
 
-同时，Vyper 把很多安全约束做成了显式语法：
+<Callout title="内部函数的 nonpayable 行为">
+  `@nonpayable` 在内部函数上不是严格强制的。外部 `@payable` 函数可以调用内部 `@nonpayable` 函数，
+  但该内部函数无法访问 `msg.value`。
+</Callout>
+
+<h2 id="constructor">重入保护与装饰器</h2>
+
+### @nonreentrant
+
+`@nonreentrant` 装饰器为函数设置全局重入锁。当任何 `@nonreentrant` 函数正在执行时，
+外部合约回调到同合约的任何其他 `@nonreentrant` 函数都会导致交易回滚。
+
+```vyper
+@external
+@nonreentrant
+def make_a_call(_addr: address):
+    # 此函数受重入保护
+    ...
+```
+
+工作原理：在函数入口将特定存储槽设为"锁定"值，在出口设为"解锁"值。
+入口检测到"锁定"状态时直接 revert。
+
+使用限制：
+
+- 不能放在 `@pure` 函数上
+- 可以放在 `@view` 函数上（仅检查锁状态，不修改）
+- 可以放在 `__default__` 函数上（但会导致合约拒绝来自回调的 ETH 转账）
+- 不允许从一个 `@nonreentrant` 函数调用另一个 `@nonreentrant` 函数
+
+使用 `vyper -f layout` 可以查看重入锁在存储中的物理位置。默认分配在 slot 0。
+
+<Callout title="重入锁的 gas 成本">
+  解锁值为 3，锁定值为 2。使用非零值是为了利用 Berlin 硬分叉后的 net gas metering，
+  重入锁的净成本约为 2300 gas。0.3.4 之前的解锁/锁定值是 0 和 1。
+</Callout>
+
+### nonreentrancy pragma
+
+从 0.4.2 起，`#pragma nonreentrancy on` 可以为文件中所有外部函数和公共 getter 自动启用重入保护
+（`constant` 和 `immutable` 的 getter 除外）。
+
+```vyper
+# pragma nonreentrancy on
+
+x: public(uint256)                    # 受重入保护
+y: public(reentrant(uint256))         # 不受保护
+
+@external
+def make_a_call(addr: address):
+    # 自动受重入保护
+    ...
+
+@external
+@reentrant
+def callback(addr: address):
+    # 显式允许重入
+    ...
+```
+
+- 默认为 `#pragma nonreentrancy off`
+- pragma 的作用域限于当前文件
+- 导入的文件不受当前文件 pragma 的影响
+
+### 装饰器完整参考
+
+| 装饰器 | 说明 |
+| --- | --- |
+| `@external` | 函数可被外部调用，进入运行时选择器表 |
+| `@internal` | 函数只能在当前合约内调用 |
+| `@deploy` | 仅在部署时调用 |
+| `@pure` | 不读合约状态或环境变量 |
+| `@view` | 不修改合约状态 |
+| `@payable` | 可接收 ETH |
+| `@nonreentrant` | 不能在外部调用期间被回调 |
+| `@raw_return` | 返回原始字节，不做 ABI 编码（仅 `@external` 函数） |
+
+### @raw_return
+
+`@raw_return` 装饰器让函数直接返回原始字节，跳过 ABI 编码。适用于代理合约和需要原样转发返回数据的场景。
+
+```vyper
+@external
+@payable
+@raw_return
+def forward_call(target: address) -> Bytes[1024]:
+    return raw_call(target, msg.data, max_outsize=1024, value=msg.value, is_delegate_call=True)
+```
+
+限制：
+
+- 只能用在 `@external` 函数上
+- 返回类型必须是 `Bytes[N]`
+- 不能用在构造函数上（但可以用在 `__default__()` 上）
+- 不能用在 `@internal` 函数上
+- 不能在接口定义（`.vyi` 文件）中使用
+
+<Callout title="注意">
+  调用 `@raw_return` 函数时应使用 `raw_call` 而非接口调用，因为返回数据不是 ABI 编码的。
+</Callout>
+
+### __default__ 函数
+
+默认函数在没有匹配的函数选择器时执行（包括直接发送 ETH 的情况）。
+相当于 Solidity 中的 `fallback` 和 `receive` 的组合。
+
+```vyper
+event Payment:
+    amount: uint256
+    sender: indexed(address)
+
+@external
+@payable
+def __default__():
+    log Payment(msg.value, msg.sender)
+```
+
+注意事项：
+
+- 必须标记为 `@external`，不能接受参数
+- 如果标记为 `@payable`，合约可以接收纯 ETH 转账
+- 如果没有定义 `__default__`，编译器会生成一个 `REVERT` 版本
+- `send` 调用只附带 2300 gas stipend，能做的事很有限（写存储、创建合约、外部调用都超过这个限额）
+- 虽然不接受参数，但可以访问 `msg.sender`、`msg.value`、`msg.gas`
+
+<h2 id="loops-and-guards">循环与控制流</h2>
+
+### if 语句
+
+```vyper
+if CONDITION:
+    ...
+elif OTHER_CONDITION:
+    ...
+else:
+    ...
+```
+
+与 Python 不同，Vyper 不允许非布尔类型在 `if` 条件中隐式转换。`if 1: pass` 会编译失败。
+
+### for 循环
+
+Vyper 的循环必须有编译期可知的上界：
+
+#### 数组迭代
+
+```vyper
+foo: int128[3] = [4, 23, 42]
+for i: int128 in foo:
+    ...
+
+# 也可以迭代字面量数组
+for i: int128 in [4, 23, 42]:
+    ...
+```
+
+限制：不能迭代多维数组；迭代期间不能修改被迭代的数组。
+
+#### range 迭代
+
+```vyper
+# 固定上界
+for i: uint256 in range(100):
+    ...
+
+# 变量上界 + 编译期 bound
+for i: uint256 in range(stop, bound=100):
+    ...
+
+# 起止范围（固定字面量）
+for i: uint256 in range(10, 20):
+    ...
+
+# 运行时起止 + 编译期 bound
+for i: uint256 in range(start, end, bound=100):
+    ...
+```
+
+当 `stop` 可能小于 `bound` 时，使用 `range(min(stop, N), bound=N)` 来避免运行时 revert。
+这对将大数组操作分块到多个交易中特别有用。
+
+### assert 和 raise
 
 ```vyper
 @external
 @nonreentrant
 def withdraw():
-    assert msg.sender == self.owner
+    assert msg.sender == self.owner, "Not owner"
     ...
+
+@external
+def restricted():
+    raise "Operation not allowed"
 ```
 
-- `assert` 和 `raise` 让失败路径留在函数体内，而不是藏在 modifier。
-- `@nonreentrant` 由编译器生成锁逻辑，保护同合约内的重入路径。
-- 外部调用用 `extcall` 或 `staticcall` 显式标注，便于审查。
+- `assert`：条件为 false 时回滚，可附带错误消息
+- `raise`：直接回滚
+
+### print（调试）
+
+```vyper
+x: uint256 = 42
+print(x, "hello")
+```
+
+`print` 通过静态调用 console 地址 (`0x000000000000000000636F6E736F6C652E6C6F67`) 实现。
+默认模式与 titanoboa 兼容，使用 `hardhat_compat=True` 可适配 Hardhat。
 
 <Callout title="控制流的审计视角">
   当你读一段 Vyper 代码时，优先找 `@external`、`@payable`、`@nonreentrant` 和 `extcall`。

@@ -1,0 +1,59 @@
+<Lead>
+  工厂合约模式：通过代码哈希验证注册交易所合约，实现跨代币对的去中心化交易路由。
+</Lead>
+
+<Callout title="学习用途">
+  本示例仅用于学习目的。请勿在未经充分审查和测试的情况下用于生产环境。
+</Callout>
+
+<h2 id="overview">概览</h2>
+
+工厂模式是 DeFi 中常见的架构：一个工厂合约注册和管理多个子合约（交易所）。本示例包含两个合约：
+
+- `Factory.vy`：工厂合约，注册交易所并路由交易
+- `Exchange.vy`：交易所合约，管理单个代币对
+
+<h2 id="contract-code">Factory 合约代码</h2>
+
+```vyper
+#pragma version >0.3.10
+
+from ethereum.ercs import IERC20
+
+interface Exchange:
+    def token() -> IERC20: view
+    def receive(_from: address, _amt: uint256): nonpayable
+    def transfer(_to: address, _amt: uint256): nonpayable
+
+exchange_codehash: public(bytes32)
+exchanges: public(HashMap[IERC20, Exchange])
+
+@deploy
+def __init__(_exchange_codehash: bytes32):
+    self.exchange_codehash = _exchange_codehash
+
+@external
+def register():
+    assert msg.sender.codehash == self.exchange_codehash
+    exchange: Exchange = Exchange(msg.sender)
+    self.exchanges[staticcall exchange.token()] = exchange
+
+@external
+def trade(_token1: IERC20, _token2: IERC20, _amt: uint256):
+    extcall self.exchanges[_token1].receive(msg.sender, _amt)
+    extcall self.exchanges[_token2].transfer(msg.sender, _amt)
+```
+
+<h2 id="walkthrough">代码解析</h2>
+
+### 代码哈希验证
+
+`register` 通过 `msg.sender.codehash` 验证调用者的运行时代码哈希与预期匹配。这确保只有部署了正确代码的交易所合约才能注册。
+
+### 接口定义
+
+使用 Vyper 的 `interface` 关键字定义 `Exchange` 接口。`staticcall` 用于只读调用（`token()`），`extcall` 用于状态变更调用（`receive`、`transfer`）。
+
+### 交易路由
+
+`trade` 函数实现了简单的 1:1 代币兑换——从 token1 的交易所接收代币，从 token2 的交易所发送等量代币。实际应用需要解决价格预言机问题。

@@ -1,0 +1,89 @@
+<Lead>
+  链上做市商合约：基于恒定乘积公式的自动做市商（AMM），实现 ETH 与代币之间的去中心化兑换。
+</Lead>
+
+<Callout title="学习用途">
+  本示例仅用于学习目的。请勿在未经充分审查和测试的情况下用于生产环境。
+</Callout>
+
+<h2 id="overview">概览</h2>
+
+这个合约实现了最基础的 AMM：
+- 使用恒定乘积公式 `x * y = k`
+- 支持 ETH 换代币和代币换 ETH
+- 收取 0.2% 手续费
+- 所有者可提取流动性并关闭交易
+
+<h2 id="contract-code">完整合约代码</h2>
+
+```vyper
+#pragma version >0.3.10
+
+from ethereum.ercs import IERC20
+
+totalEthQty: public(uint256)
+totalTokenQty: public(uint256)
+invariant: public(uint256)
+token: IERC20
+owner: public(address)
+finalized: bool
+
+@external
+@payable
+def initiate(token_addr: address, token_quantity: uint256):
+    assert self.invariant == 0
+    self.token = IERC20(token_addr)
+    extcall self.token.transferFrom(msg.sender, self, token_quantity)
+    self.owner = msg.sender
+    self.totalEthQty = msg.value
+    self.totalTokenQty = token_quantity
+    self.invariant = msg.value * token_quantity
+    assert self.invariant > 0
+
+@external
+@payable
+def ethToTokens():
+    assert not self.finalized
+    fee: uint256 = msg.value // 500
+    eth_in_purchase: uint256 = msg.value - fee
+    new_total_eth: uint256 = self.totalEthQty + eth_in_purchase
+    new_total_tokens: uint256 = self.invariant // new_total_eth
+    extcall self.token.transfer(msg.sender, self.totalTokenQty - new_total_tokens)
+    self.totalEthQty = new_total_eth
+    self.totalTokenQty = new_total_tokens
+
+@external
+def tokensToEth(sell_quantity: uint256):
+    assert not self.finalized
+    extcall self.token.transferFrom(msg.sender, self, sell_quantity)
+    new_total_tokens: uint256 = self.totalTokenQty + sell_quantity
+    new_total_eth: uint256 = self.invariant // new_total_tokens
+    eth_to_send: uint256 = self.totalEthQty - new_total_eth
+    send(msg.sender, eth_to_send)
+    self.totalEthQty = new_total_eth
+    self.totalTokenQty = new_total_tokens
+
+@external
+def ownerWithdraw():
+    assert self.owner == msg.sender
+    self.finalized = True
+    extcall self.token.transfer(self.owner, self.totalTokenQty)
+    if self.balance > 0:
+        send(self.owner, self.balance)
+```
+
+<h2 id="walkthrough">代码解析</h2>
+
+### 恒定乘积公式
+
+`initiate` 设置初始的 ETH 和代币数量，计算不变量 `k = ethQty * tokenQty`。后续每次交易都维持这个不变量。
+
+### 兑换机制
+
+`ethToTokens`：用户发送 ETH，合约根据新的 ETH 总量反算代币总量，差额即为用户获得的代币数。手续费通过在计算前扣除 0.2% 的 ETH 实现。
+
+`tokensToEth`：反向操作。使用 `extcall` 从用户处转入代币，计算应发送的 ETH 数量。
+
+### 注意 extcall 的使用
+
+这个合约展示了 Vyper 0.4.0+ 要求的 `extcall` 关键字——所有修改外部状态的调用都必须显式标记。

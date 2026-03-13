@@ -1,0 +1,111 @@
+<Lead>
+  ERC-20 代币合约：实现标准代币接口，支持转账、授权、铸造和销毁。
+</Lead>
+
+<Callout title="学习用途">
+  本示例仅用于学习目的。请勿在未经充分审查和测试的情况下用于生产环境。
+</Callout>
+
+<h2 id="overview">概览</h2>
+
+ERC-20 是以太坊上最常用的代币标准。这个合约实现了完整的 ERC-20 接口：
+
+- `transfer` / `transferFrom`：代币转账
+- `approve`：授权第三方花费代币
+- `mint` / `burn`：铸造和销毁代币
+- 使用 `from ethereum.ercs import IERC20` 导入标准接口
+
+<h2 id="contract-code">完整合约代码</h2>
+
+```vyper
+#pragma version >0.3.10
+
+from ethereum.ercs import IERC20
+from ethereum.ercs import IERC20Detailed
+
+implements: IERC20
+implements: IERC20Detailed
+
+name: public(String[32])
+symbol: public(String[32])
+decimals: public(uint8)
+
+balanceOf: public(HashMap[address, uint256])
+allowance: public(HashMap[address, HashMap[address, uint256]])
+totalSupply: public(uint256)
+minter: address
+
+@deploy
+def __init__(_name: String[32], _symbol: String[32], _decimals: uint8, _supply: uint256):
+    init_supply: uint256 = _supply * 10 ** convert(_decimals, uint256)
+    self.name = _name
+    self.symbol = _symbol
+    self.decimals = _decimals
+    self.balanceOf[msg.sender] = init_supply
+    self.totalSupply = init_supply
+    self.minter = msg.sender
+    log IERC20.Transfer(sender=empty(address), receiver=msg.sender, value=init_supply)
+
+@external
+def transfer(_to: address, _value: uint256) -> bool:
+    self.balanceOf[msg.sender] -= _value
+    self.balanceOf[_to] += _value
+    log IERC20.Transfer(sender=msg.sender, receiver=_to, value=_value)
+    return True
+
+@external
+def transferFrom(_from: address, _to: address, _value: uint256) -> bool:
+    self.balanceOf[_from] -= _value
+    self.balanceOf[_to] += _value
+    self.allowance[_from][msg.sender] -= _value
+    log IERC20.Transfer(sender=_from, receiver=_to, value=_value)
+    return True
+
+@external
+def approve(_spender: address, _value: uint256) -> bool:
+    self.allowance[msg.sender][_spender] = _value
+    log IERC20.Approval(owner=msg.sender, spender=_spender, value=_value)
+    return True
+
+@external
+def mint(_to: address, _value: uint256):
+    assert msg.sender == self.minter
+    assert _to != empty(address)
+    self.totalSupply += _value
+    self.balanceOf[_to] += _value
+    log IERC20.Transfer(sender=empty(address), receiver=_to, value=_value)
+
+@internal
+def _burn(_to: address, _value: uint256):
+    assert _to != empty(address)
+    self.totalSupply -= _value
+    self.balanceOf[_to] -= _value
+    log IERC20.Transfer(sender=_to, receiver=empty(address), value=_value)
+
+@external
+def burn(_value: uint256):
+    self._burn(msg.sender, _value)
+
+@external
+def burnFrom(_to: address, _value: uint256):
+    self.allowance[_to][msg.sender] -= _value
+    self._burn(_to, _value)
+```
+
+<h2 id="walkthrough">代码解析</h2>
+
+### 接口实现
+
+使用 `implements: IERC20` 声明合约实现 ERC-20 标准。编译器会验证所有必需的函数签名是否正确实现。
+
+### 溢出保护
+
+Vyper 默认检查算术溢出。`balanceOf[msg.sender] -= _value` 在余额不足时自动 revert，无需额外的 `require` 检查。
+
+### 事件日志
+
+铸造使用 `sender=empty(address)` 表示从零地址转出，销毁使用 `receiver=empty(address)` 表示转入零地址。这是 ERC-20 标准的约定。
+
+### 授权模式
+
+`approve` + `transferFrom` 实现了两步授权转账。注意 `approve` 直接覆盖旧值（存在竞态条件风险，生产代码应考虑 increaseAllowance/decreaseAllowance 模式）。

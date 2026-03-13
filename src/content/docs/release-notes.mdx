@@ -1,0 +1,141 @@
+<Lead>
+  本页汇总 Vyper 0.4.x 系列的发布记录。每个版本都包括破坏性变更、新功能、安全修复和工具链改进。
+  完整的安全审计报告可在 [vyperlang/audits](https://github.com/vyperlang/audits/tree/master) 仓库查看。
+</Lead>
+
+<h2 id="v0-4-3">v0.4.3 — "Buttermilk Racer"</h2>
+
+**发布日期：** 2025-06-19
+
+审计：[ChainSecurity](https://github.com/vyperlang/audits/blob/master/audits/ChainSecurity_Vyper_June_2025_limited_review.pdf)、[Anatomist](https://github.com/vyperlang/audits/blob/master/audits/Anatomist_Vyper_April_2025.pdf)
+
+### 破坏性变更
+
+- 默认 EVM 版本改为 `prague`
+
+### 新功能
+
+- 新增 `@raw_return` 装饰器：允许合约直接返回原始字节而无需 ABI 编码，适用于代理合约场景
+- 接口中禁止使用 `@raw_return`
+
+### Venom 改进
+
+多项 Venom 优化器管线改进，包括 DFTPass 修复、reduce single-use expansion、函数内联修复、LALR(1) 语法重写等。
+
+<h2 id="v0-4-2">v0.4.2 — "Lernaean Hydra"</h2>
+
+**发布日期：** 2025-05-31
+
+审计：[ChainSecurity](https://github.com/vyperlang/audits/blob/master/audits/ChainSecurity_Vyper_April_2025.pdf)、[Anatomist](https://github.com/vyperlang/audits/blob/master/audits/Anatomist_Vyper_April_2025.pdf)
+
+### 破坏性变更
+
+- `sqrt` 移至新的 stdlib `math` 模块（`from vyper.builtins import math`）
+- 禁止从 `@nonreentrant` 函数调用其他 `@nonreentrant` 函数
+- 禁止调用 `__default__` 函数
+- 移除弃用的位运算内建函数（`bitwise_and` 等）
+- `--venom` 重命名为 `--venom-experimental`
+- 更新存储布局格式
+
+### 新功能
+
+- **默认重入保护**：`@nonreentrant` 现在可通过 `#pragma nonreentrancy on` 全局启用
+- 新增 `raw_create()` 内建函数
+- 为 `bytesM` 类型启用位运算操作
+- `as_wei_value` 扩展至所有数值类型
+
+### 安全修复
+
+- `concat()` 零长度参数可能跳过副作用 (GHSA-vgf2-gvx8-xwc3)
+- `slice()` 输出长度为 0 时可能跳过副作用 (GHSA-4w26-8p97-f4jp)
+
+### Venom 改进
+
+新增死存储消除、CSE 消除优化、调用约定改进。基准合约通常减小 5% 体积。
+
+<h2 id="v0-4-1">v0.4.1 — "Tokara Habu"</h2>
+
+**发布日期：** 2025-03-01
+
+主要是打磨版本，聚焦于 bug 修复、UX 改进和安全修复（4 个低中等级 GHSA 通告）。Venom 管线取得了显著进步。
+
+### 破坏性变更
+
+- `.vyi` 文件中 `@external` 修饰符变为可选
+- 即使设置了 `skip_contract_check` 也检查 `returndatasize`
+- 修复 `IERC4626` 签名
+- 禁止绝对相对导入
+
+### 新功能
+
+- `module.__at__()` 用于转换为接口
+- 事件实例化支持关键字参数
+- 原生十六进制字符串字面量
+- 引入 `mana` 作为 `gas` 的别名
+- 支持从导入接口中使用 flag 类型
+
+### 安全修复
+
+- 某些预编译合约的成功状态未检查
+- AugAssign 求值顺序导致对象内 OOB 写入
+- `sqrt` 未定义舍入行为
+- `for` 列表迭代器的多次求值问题
+
+### 工具改进
+
+- 新增 `-Werror` 和 `-Wnone` 选项
+- 支持通过 `json` 和 `.vyz` 输入的存储布局
+- initcode 中添加完整性哈希
+
+<h2 id="v0-4-0">v0.4.0 — "Nagini"</h2>
+
+**发布日期：** 2024-06-20
+
+v0.4.0 是 Vyper 的重大版本升级。核心改动包括全新的导入/模块系统和实验性 Venom 后端。
+
+审计：[ChainSecurity](https://github.com/vyperlang/audits/blob/master/audits/ChainSecurity_Vyper_December_2023_limited_review.pdf)（3 轮）、[Statemind](https://github.com/vyperlang/audits/blob/master/audits/Statemind_Vyper_June_2024_audit.pdf)、[OtterSec](https://github.com/vyperlang/audits/blob/master/audits/OtterSec_Vyper_November_2023_audit.pdf)（2 轮）
+
+### 破坏性变更
+
+- 默认 EVM 版本改为 `cancun`
+- 移除命名重入锁（改为全局锁）
+- `block.prevrandao` 签名变更
+- `decimal` 的 ABI 类型改为 `int168`
+- `_abi_encode`/`_abi_decode` 重命名（移除前缀下划线）
+- `decimal` 需要显式 feature flag 启用
+- `@internal` 装饰器变为可选
+- 外部调用需要 `extcall`/`staticcall` 关键字
+- 引入 `//`（整数除法），禁止对整数使用 `/`
+- 结构体实例化使用关键字参数
+- 循环变量需要类型标注
+- `enum` 关键字替换为 `flag`
+- 移除内建常量
+- 移除 Istanbul 和 Berlin 支持
+- `range` 支持双参数加 `bound`
+- `vyper.interfaces` 重命名为 `ethereum.ercs`
+
+### 模块系统
+
+这是 v0.4.0 最核心的新功能：
+
+- 实现"无状态"模块
+- 单例模块与所有权层级
+- 函数导出（`exports`）
+- ABI 中自动导出事件
+- 支持导入模块中的常量和接口定义
+
+### Venom IR
+
+全新的中间表示，受 LLVM IR 启发：
+
+- SSA（静态单赋值）
+- mem2var 和 SCCP 优化
+- 存储消除和字面量提取
+- 代数优化和分支优化
+
+### 其他新功能
+
+- `blobhash()` 内建函数
+- 支持 `block.blobbasefee`
+- `create` 内建函数支持 `revert_on_failure` 参数
+- 允许字节串的向下转型

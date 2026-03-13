@@ -1,0 +1,47 @@
+<Lead>
+  `refer/docs/testing-contracts.rst` 推荐 Vyper 项目基于 `pytest` 测试，
+  再搭配 Titanoboa 或 Moccasin 其中之一完成解释执行、部署和调试。
+</Lead>
+
+<h2 id="recommended-stack">推荐测试栈</h2>
+
+官方建议把 `pytest` 作为基础测试框架，再按项目形态选择上层工具：
+
+- 偏底层、偏解释器能力和调试体验：选 Titanoboa。
+- 想要更完整的项目脚手架和测试工作流：选 Moccasin。
+
+<h2 id="titanoboa">Titanoboa</h2>
+
+[Titanoboa](https://github.com/vyperlang/titanoboa) 是 Vyper 团队维护的解释器式工具，
+适合做快速测试和调试。官方文档强调了它的几项能力：
+
+- 测试执行速度快。
+- traceback 更易读，便于调试。
+- 支持 forking。
+- 提供部署能力。
+
+入门文档见官方站点：[Titanoboa Documentation](https://titanoboa.readthedocs.io/en/latest/)。
+
+<Callout title="适用场景">
+  如果你的重点是快速写测试、直接解释执行合约、并在失败时拿到尽可能友好的调试信息，
+  Titanoboa 往往是最短路径。
+</Callout>
+
+<h2 id="moccasin">Moccasin</h2>
+
+[Moccasin](https://github.com/Cyfrin/moccasin) 构建在 Titanoboa 之上，是更完整的 Pythonic
+开发与测试框架。参考文档列出的特点包括：
+
+- 内建 ZKsync 支持。
+- 具名合约，便于管理地址和依赖。
+- 自定义 `pytest` 标记，适合 staging 测试。
+- 加密钱包支持，不必把私钥直接放进 `.env`。
+- GitHub 与 Python 依赖安装能力。
+
+入门文档见：[Moccasin Documentation](https://cyfrin.github.io/moccasin/)。
+
+<h2 id="selection-guidance">如何选择</h2>
+
+- 你只想测试 Vyper 合约本身，并保持工具链最轻：先用 Titanoboa。
+- 你需要项目模板、部署脚本、网络配置和更完整的开发体验：选 Moccasin。
+- 两者都基于 Python 生态，所以和 `pytest` 的整合都比较自然。

@@ -1,0 +1,162 @@
+<Lead>
+  投票合约：主席授权参与者投票，支持投票委托，最终统计胜出提案。
+</Lead>
+
+<Callout title="学习用途">
+  本示例仅用于学习目的。请勿在未经充分审查和测试的情况下用于生产环境。
+</Callout>
+
+<h2 id="overview">概览</h2>
+
+这个合约实现了一个带委托功能的投票系统：
+
+- 主席（部署者）授予参与者投票权
+- 每个参与者可以直接投票，或将投票权委托给另一个投票者
+- 委托链会自动传递权重
+- 调用 `winningProposal()` 返回票数最多的提案
+
+<h2 id="contract-code">完整合约代码</h2>
+
+```vyper
+#pragma version >0.3.10
+
+# Voting with delegation.
+
+struct Voter:
+    weight: int128
+    voted: bool
+    delegate: address
+    vote: int128
+
+struct Proposal:
+    name: bytes32
+    voteCount: int128
+
+voters: public(HashMap[address, Voter])
+proposals: public(HashMap[int128, Proposal])
+voterCount: public(int128)
+chairperson: public(address)
+int128Proposals: public(int128)
+
+@view
+@internal
+def _delegated(addr: address) -> bool:
+    return self.voters[addr].delegate != empty(address)
+
+@view
+@external
+def delegated(addr: address) -> bool:
+    return self._delegated(addr)
+
+@view
+@internal
+def _directlyVoted(addr: address) -> bool:
+    return self.voters[addr].voted and (self.voters[addr].delegate == empty(address))
+
+@view
+@external
+def directlyVoted(addr: address) -> bool:
+    return self._directlyVoted(addr)
+
+@deploy
+def __init__(_proposalNames: bytes32[2]):
+    self.chairperson = msg.sender
+    self.voterCount = 0
+    for i: int128 in range(2):
+        self.proposals[i] = Proposal(
+            name=_proposalNames[i],
+            voteCount=0
+        )
+        self.int128Proposals += 1
+
+@external
+def giveRightToVote(voter: address):
+    assert msg.sender == self.chairperson
+    assert not self.voters[voter].voted
+    assert self.voters[voter].weight == 0
+    self.voters[voter].weight = 1
+    self.voterCount += 1
+
+@internal
+def _forwardWeight(delegate_with_weight_to_forward: address):
+    assert self._delegated(delegate_with_weight_to_forward)
+    assert self.voters[delegate_with_weight_to_forward].weight > 0
+    target: address = self.voters[delegate_with_weight_to_forward].delegate
+    for i: int128 in range(4):
+        if self._delegated(target):
+            target = self.voters[target].delegate
+            assert target != delegate_with_weight_to_forward
+        else:
+            break
+    weight_to_forward: int128 = self.voters[delegate_with_weight_to_forward].weight
+    self.voters[delegate_with_weight_to_forward].weight = 0
+    self.voters[target].weight += weight_to_forward
+    if self._directlyVoted(target):
+        self.proposals[self.voters[target].vote].voteCount += weight_to_forward
+        self.voters[target].weight = 0
+
+@external
+def forwardWeight(delegate_with_weight_to_forward: address):
+    self._forwardWeight(delegate_with_weight_to_forward)
+
+@external
+def delegate(to: address):
+    assert not self.voters[msg.sender].voted
+    assert to != msg.sender
+    assert to != empty(address)
+    self.voters[msg.sender].voted = True
+    self.voters[msg.sender].delegate = to
+    self._forwardWeight(msg.sender)
+
+@external
+def vote(proposal: int128):
+    assert not self.voters[msg.sender].voted
+    assert proposal < self.int128Proposals
+    self.voters[msg.sender].vote = proposal
+    self.voters[msg.sender].voted = True
+    self.proposals[proposal].voteCount += self.voters[msg.sender].weight
+    self.voters[msg.sender].weight = 0
+
+@view
+@internal
+def _winningProposal() -> int128:
+    winning_vote_count: int128 = 0
+    winning_proposal: int128 = 0
+    for i: int128 in range(2):
+        if self.proposals[i].voteCount > winning_vote_count:
+            winning_vote_count = self.proposals[i].voteCount
+            winning_proposal = i
+    return winning_proposal
+
+@view
+@external
+def winningProposal() -> int128:
+    return self._winningProposal()
+
+@view
+@external
+def winnerName() -> bytes32:
+    return self.proposals[self._winningProposal()].name
+```
+
+<h2 id="walkthrough">代码解析</h2>
+
+### 数据结构
+
+`Voter` 结构体包含投票权重（`weight`）、是否已投票（`voted`）、委托对象（`delegate`）和投票选择（`vote`）。`Proposal` 包含提案名称和累计票数。
+
+### 权限控制
+
+只有主席（`chairperson`，即合约部署者）可以调用 `giveRightToVote` 授予投票权。每个投票者初始权重为 1。
+
+### 投票委托
+
+`delegate()` 允许将投票权委托给其他人。`_forwardWeight` 内部函数处理委托链传递，最多跟踪 4 层委托（防止无限循环）。如果最终目标已直接投票，权重会自动累加到对应提案。
+
+### 直接投票
+
+`vote()` 将调用者的权重直接加到指定提案的票数上，并将权重清零以防重复投票。
+
+### 查询结果
+
+`winningProposal()` 遍历所有提案返回票数最多的索引，`winnerName()` 返回获胜提案的名称。

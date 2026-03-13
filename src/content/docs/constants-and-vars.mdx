@@ -1,0 +1,119 @@
+<Lead>
+  `refer/docs/constants-and-vars.rst` 这一页定义了 Vyper 里最常用的上下文信息来源：
+  区块链环境变量、`self` 引用，以及在模块级定义的自定义常量。
+</Lead>
+
+<h2 id="environment-variables">环境变量</h2>
+
+环境变量始终存在于命名空间中，主要用于暴露当前区块、交易和调用上下文的信息。
+它们不需要声明，也不能被重写。
+
+### 区块与交易属性
+
+| 名称 | 类型 | 含义 |
+| --- | --- | --- |
+| `block.coinbase` | `address` | 当前区块出块者地址 |
+| `block.difficulty` | `uint256` | 当前区块难度 |
+| `block.prevrandao` | `bytes32` | Beacon 链提供的随机性信标 |
+| `block.number` | `uint256` | 当前区块号 |
+| `block.gaslimit` | `uint256` | 当前区块 gas 上限 |
+| `block.basefee` | `uint256` | 当前区块的 base fee |
+| `block.blobbasefee` | `uint256` | 当前区块 blob gas 的 base fee |
+| `block.prevhash` | `bytes32` | 等价于 `blockhash(block.number - 1)` |
+| `block.timestamp` | `uint256` | 当前区块的 Unix 时间戳 |
+| `chain.id` | `uint256` | 当前链的 Chain ID |
+| `msg.data` | `Bytes` | 调用携带的 calldata |
+| `msg.gas` | `uint256` | 当前剩余 gas |
+| `msg.mana` | `uint256` | `msg.gas` 的别名 |
+| `msg.sender` | `address` | 当前调用的直接发送者 |
+| `msg.value` | `uint256` | 随消息发送的 wei 数量 |
+| `tx.origin` | `address` | 整条调用链的原始交易发送者 |
+| `tx.gasprice` | `uint256` | 当前交易的 gas price（wei） |
+
+<Callout title="关于 block.prevrandao">
+  `block.prevrandao` 是 `block.difficulty` 操作码的别名。根据 EIP-4399，在 2022 年 9 月 15 日
+  以太坊完成 Paris 升级（The Merge）之后，`block.difficulty` 已被视为弃用语义，
+  新代码应优先使用 `block.prevrandao`。
+</Callout>
+
+`msg.data` 需要配合 `slice()` 显式截取 calldata 片段。如果截取范围超出边界会直接抛错，
+长度则可以通过 `len(msg.data)` 判断。
+
+```vyper
+@external
+def first_four_bytes() -> Bytes[4]:
+    assert len(msg.data) >= 4, "calldata too short"
+    return slice(msg.data, 0, 4)
+```
+
+<h2 id="self-variable">self 变量</h2>
+
+`self` 是一个特殊环境变量，用来在合约内部引用当前合约自身。它既能表示当前合约地址，
+也能访问状态变量和内部函数。
+
+| 名称 | 类型 | 含义 |
+| --- | --- | --- |
+| `self` | `address` | 当前合约地址 |
+| `self.balance` | `uint256` | 当前合约余额 |
+
+### 访问状态变量
+
+在 Vyper 中，函数内部访问状态变量必须显式写成 `self.<name>`：
+
+```vyper
+stored_value: uint256
+
+@external
+def set_value(value: uint256) -> bool:
+    self.stored_value = value
+    return True
+
+@external
+@view
+def get_value() -> uint256:
+    return self.stored_value
+```
+
+### 调用内部函数
+
+`self` 也用于调用内部函数，这能明确区分“当前合约内部逻辑”与“外部合约调用”：
+
+```vyper
+@internal
+def _times_two(amount: uint256) -> uint256:
+    return amount * 2
+
+@external
+def calculate(amount: uint256) -> uint256:
+    return self._times_two(amount)
+```
+
+<h2 id="custom-constants">自定义常量</h2>
+
+Vyper 允许在模块级定义自定义常量。常量使用 `constant(...)` 关键字声明，
+一旦定义就不能被修改。
+
+```vyper
+TOTAL_SUPPLY: constant(uint256) = 10_000_000
+total_supply: public(uint256)
+
+@deploy
+def __init__():
+    self.total_supply = TOTAL_SUPPLY
+```
+
+常量适合保存以下内容：
+
+- 协议固定参数，例如费率分母、最大供应量、精度缩放因子。
+- 与链无关、部署后不会变化的配置。
+- 希望在编译期就被内联并固定下来的值。
+
+如果某个值是在部署时确定，但部署后不再变化，应优先考虑 `immutable`。
+它的约束与写法在[作用域与声明](/docs/scoping-and-declarations)里单独展开。
+
+<h2 id="practical-guidelines">使用建议</h2>
+
+- 对随机性或区块属性敏感的逻辑，优先先判断输入边界，再读取环境变量。
+- 除了读地址和余额，`self` 最重要的用途其实是明确“这是状态访问”或“这是内部调用”。
+- 对不会变化的协议参数使用 `constant`，对部署时确定的配置使用 `immutable`，不要把两者混用。
+- 谨慎使用 `tx.origin`。它暴露的是整条调用链最初的发送者，通常不适合作为权限控制依据。

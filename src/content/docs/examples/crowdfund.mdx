@@ -1,0 +1,81 @@
+<Lead>
+  众筹合约：参与者向活动捐款，达到目标则资金发送给受益人，否则参与者可以退款。
+</Lead>
+
+<Callout title="学习用途">
+  本示例仅用于学习目的。请勿在未经充分审查和测试的情况下用于生产环境。
+</Callout>
+
+<h2 id="overview">概览</h2>
+
+这个合约实现了经典的众筹逻辑：
+
+- 部署时设定受益人、筹款目标和截止时间
+- 参与者在截止前通过 `participate()` 捐款
+- 截止后如果达到目标，调用 `finalize()` 将资金发送给受益人
+- 如果未达目标，参与者通过 `refund()` 取回捐款
+
+<h2 id="contract-code">完整合约代码</h2>
+
+```vyper
+#pragma version >0.3.10
+
+# example of a crowd funding contract
+
+funders: HashMap[address, uint256]
+beneficiary: address
+deadline: public(uint256)
+goal: public(uint256)
+timelimit: public(uint256)
+finalized: bool
+
+@deploy
+def __init__(_beneficiary: address, _goal: uint256, _timelimit: uint256):
+    self.beneficiary = _beneficiary
+    self.deadline = block.timestamp + _timelimit
+    self.timelimit = _timelimit
+    assert _goal > 0, "Goal must be non-zero"
+    self.goal = _goal
+
+@external
+@payable
+def participate():
+    assert block.timestamp < self.deadline, "deadline has expired"
+    assert not self.finalized
+    self.funders[msg.sender] += msg.value
+
+@external
+def finalize():
+    assert block.timestamp >= self.deadline, "deadline has not expired yet"
+    assert self.balance >= self.goal, "goal has not been reached"
+    assert self.balance > 0
+    self.finalized = True
+    send(self.beneficiary, self.balance)
+
+@external
+def refund():
+    assert block.timestamp >= self.deadline and self.balance < self.goal
+    assert not self.finalized
+    assert self.funders[msg.sender] > 0
+    value: uint256 = self.funders[msg.sender]
+    self.funders[msg.sender] = 0
+    send(msg.sender, value)
+```
+
+<h2 id="walkthrough">代码解析</h2>
+
+### 状态变量
+
+`funders` 映射记录每个地址的捐款金额。`finalized` 标记防止重复提取。`goal` 是筹款目标，`deadline` 是截止时间。
+
+### participate() — 参与捐款
+
+标记为 `@payable`，检查截止时间和是否已完成，然后将捐款累加到调用者的记录中。同一地址可以多次捐款。
+
+### finalize() — 完成筹款
+
+只有在截止时间过后、余额达到目标时才能调用。使用 `self.balance` 直接检查合约余额，设置 `finalized` 后将全部余额发送给受益人。
+
+### refund() — 退款
+
+截止后如果余额未达目标，参与者可以取回自己的捐款。先读取金额、清零、再发送——标准的提款模式。

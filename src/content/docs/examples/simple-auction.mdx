@@ -1,0 +1,98 @@
+<Lead>
+  一个简单的公开拍卖合约：参与者在限定时间内提交出价，拍卖结束后最高出价者的资金发送给受益人。
+</Lead>
+
+<Callout title="学习用途">
+  本示例仅用于学习目的。请勿在未经充分审查和测试的情况下用于生产环境。
+</Callout>
+
+<h2 id="overview">概览</h2>
+
+这个合约实现了最基础的拍卖逻辑：
+
+- 部署时设定受益人、拍卖开始时间和竞价时长
+- 参与者在竞价期内通过 `bid()` 提交出价（附带 ETH）
+- 被超越的出价者可以通过 `withdraw()` 取回资金（提款模式）
+- 拍卖结束后调用 `endAuction()` 将最高出价发送给受益人
+
+<h2 id="contract-code">完整合约代码</h2>
+
+```vyper
+#pragma version >0.3.10
+
+# Open Auction
+
+# Auction params
+# Beneficiary receives money from the highest bidder
+beneficiary: public(address)
+auctionStart: public(uint256)
+auctionEnd: public(uint256)
+
+# Current state of auction
+highestBidder: public(address)
+highestBid: public(uint256)
+
+# Set to true at the end, disallows any change
+ended: public(bool)
+
+# Keep track of refunded bids so we can follow the withdraw pattern
+pendingReturns: public(HashMap[address, uint256])
+
+# Create a simple auction with `_auction_start` and
+# `_bidding_time` seconds bidding time on behalf of the
+# beneficiary address `_beneficiary`.
+@deploy
+def __init__(_beneficiary: address, _auction_start: uint256, _bidding_time: uint256):
+    self.beneficiary = _beneficiary
+    self.auctionStart = _auction_start
+    self.auctionEnd = self.auctionStart + _bidding_time
+    assert block.timestamp < self.auctionEnd
+
+@external
+@payable
+def bid():
+    assert block.timestamp >= self.auctionStart
+    assert block.timestamp < self.auctionEnd
+    assert msg.value > self.highestBid
+    self.pendingReturns[self.highestBidder] += self.highestBid
+    self.highestBidder = msg.sender
+    self.highestBid = msg.value
+
+@external
+def withdraw():
+    pending_amount: uint256 = self.pendingReturns[msg.sender]
+    self.pendingReturns[msg.sender] = 0
+    send(msg.sender, pending_amount)
+
+@external
+def endAuction():
+    # 1. Conditions
+    assert block.timestamp >= self.auctionEnd
+    assert not self.ended
+    # 2. Effects
+    self.ended = True
+    # 3. Interaction
+    send(self.beneficiary, self.highestBid)
+```
+
+<h2 id="walkthrough">代码解析</h2>
+
+### 状态变量
+
+合约使用 `public()` 声明了受益人地址、拍卖时间范围、当前最高出价者和出价金额等关键状态。`pendingReturns` 是一个 `HashMap`，用于跟踪每个地址待退还的金额，这是提款模式的核心数据结构。
+
+### 构造函数
+
+`__init__` 接收受益人地址、拍卖开始时间和竞价时长。通过 `assert` 确保拍卖结束时间在未来。
+
+### bid() — 提交出价
+
+标记为 `@payable`，用户调用时附带 ETH 作为出价。三个 `assert` 检查：竞价期已开始、未结束、新出价高于当前最高。通过将前一个最高出价累加到 `pendingReturns` 来实现提款模式。
+
+### withdraw() — 提取退款
+
+被超越的出价者调用此函数取回资金。先读取待退金额，清零后再发送——这个顺序防止了重入攻击。
+
+### endAuction() — 结束拍卖
+
+遵循"检查-效果-交互"模式：先检查条件，再修改状态，最后与外部交互。这是 Solidity 和 Vyper 中推荐的安全编码模式。

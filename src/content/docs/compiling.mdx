@@ -1,14 +1,14 @@
 <Lead>
-  编译器不是文档最后才需要看的工具。相反，越早理解 `vyper` 和 `vyper-json` 的输出能力，
+  编译器不是文档最后才需要看的工具。越早理解 `vyper` 和 `vyper-json` 的输出能力，
   你越容易在开发、调试和审计阶段建立稳定的工程习惯。
 </Lead>
 
 <h2 id="cli-basics">CLI 基础</h2>
 
-Vyper 主要提供两套入口：
+Vyper 提供两套命令行入口：
 
-- `vyper`：命令行直接编译单个合约或归档。
-- `vyper-json`：通过标准 JSON 输入输出，与构建系统更容易集成。
+- `vyper`：编译合约文件或归档文件，支持多种输出格式
+- `vyper-json`：JSON 标准接口，便于与构建系统集成
 
 最小编译命令：
 
@@ -16,59 +16,228 @@ Vyper 主要提供两套入口：
 vyper Counter.vy
 ```
 
-如果有导入路径，通常会写成：
+指定搜索路径（用于导入解析）：
 
 ```bash
-vyper -p contracts contracts/Counter.vy
+vyper -p yourProject yourProject/Counter.vy
 ```
 
-<h2 id="output-formats">常见产物</h2>
+使用 `vyper --help` 查看完整选项列表。
 
-`-f` 参数可以输出多种格式，例如 ABI、字节码、布局和接口：
+<h2 id="output-formats">输出格式全集</h2>
+
+`-f` 参数指定输出格式，多个格式用逗号分隔：
 
 ```bash
 vyper -f abi,bytecode,layout Counter.vy
 ```
 
-实践上最常用的几类产物是：
+完整的输出格式列表：
 
-- `abi`：前端、脚本和测试都要用。
-- `bytecode` / `bytecode_runtime`：部署与验证时常见。
-- `layout`：分析状态变量布局，尤其适合审计和升级场景。
-- `interface` / `external_interface`：生成可复用接口定义。
-- `blueprint_bytecode`：做 blueprint 工厂时会用到。
+| 格式 | 说明 |
+| --- | --- |
+| `abi` | 合约 ABI（前端、脚本和测试必需） |
+| `abi_python` | Python 格式的 ABI |
+| `bytecode` | 部署字节码 |
+| `bytecode_runtime` | 运行时字节码 |
+| `blueprint_bytecode` | ERC-5202 兼容的 blueprint 字节码 |
+| `interface` | Vyper 接口定义 |
+| `external_interface` | 外部接口定义 |
+| `ast` | 抽象语法树 |
+| `annotated_ast` | 带注解的 AST |
+| `ir` | 中间表示 |
+| `ir_json` | JSON 格式的 IR |
+| `ir_runtime` | 运行时 IR |
+| `asm` | EVM 汇编 |
+| `opcodes` | 操作码列表 |
+| `opcodes_runtime` | 运行时操作码列表 |
+| `source_map` | 源码映射 |
+| `source_map_runtime` | 运行时源码映射 |
+| `method_identifiers` | 函数选择器哈希列表 |
+| `userdoc` | NatSpec 用户文档 |
+| `devdoc` | NatSpec 开发者文档 |
+| `metadata` | 编译元数据 |
+| `combined_json` | 组合 JSON 输出 |
+| `layout` | 存储布局 |
+| `integrity` | 完整性哈希 |
+| `archive` | Vyper 归档文件 |
+| `solc_json` | Solidity 兼容的标准 JSON 输入 |
+| `cfg` | 控制流图 |
+| `cfg_runtime` | 运行时控制流图 |
+
+### 存储布局
+
+查看合约的存储布局：
+
+```bash
+vyper -f layout Counter.vy
+```
+
+输出一个 JSON 对象，显示编译器为所有状态变量确定的存储位置。
+
+覆盖默认存储布局（用于升级或审计场景）：
+
+```bash
+vyper --storage-layout-file storageLayout.json Counter.vy
+```
+
+输入格式必须与 `vyper -f layout` 输出的 `.storage_layout` 字段匹配。
 
 <h2 id="json-interface">JSON 接口</h2>
 
-如果你的构建系统更偏自动化，`vyper-json` 会更自然：
+`vyper-json` 接收 JSON 格式输入，返回 JSON 格式输出：
 
 ```bash
+# 从 stdin 读取
+vyper-json
+
+# 从文件读取
+vyper-json project.json
+
+# 输出到文件
 vyper-json project.json -o compiled.json
 ```
 
-它会优先从输入 JSON 中的这些位置解析依赖：
+### 输入 JSON 格式
 
-1. `interfaces`
-2. `sources`
+```json
+{
+    "language": "Vyper",
+    "sources": {
+        "contracts/foo.vy": {
+            "content": "@external\ndef foo() -> bool:\n    return True"
+        }
+    },
+    "interfaces": {
+        "contracts/bar.vy": { "content": "" },
+        "contracts/baz.json": { "abi": [] }
+    },
+    "storage_layout_overrides": {
+        "contracts/foo.vy": {
+            "a": {"type": "uint256", "slot": 1, "n_slots": 1},
+            "b": {"type": "uint256", "slot": 0, "n_slots": 1}
+        }
+    },
+    "settings": {
+        "evmVersion": "prague",
+        "optimize": "gas",
+        "bytecodeMetadata": true,
+        "experimentalCodegen": false,
+        "search_paths": [],
+        "outputSelection": {
+            "*": ["evm.bytecode", "abi"],
+            "contracts/foo.vy": ["ast"]
+        }
+    }
+}
+```
 
-这意味着你可以把编译输入打包成一个可复现的描述文件，而不是依赖本地目录巧合。
+依赖解析顺序：
+1. `interfaces` 字段中定义的接口
+2. `sources` 字段中合约推导出的接口
+
+### 输出 JSON 格式
+
+输出包含以下主要字段：
+
+- `compiler`：编译器版本
+- `errors`：错误和警告列表（含 `sourceLocation`、`type`、`severity`、`message`）
+- `sources`：文件级输出（AST 等）
+- `contracts`：合约级输出（ABI、字节码、源码映射、方法标识符等）
+
+错误的 `component` 字段指示发生阶段：`json`（JSON 解析）、`parser`（语法解析）、`compiler`（编译）、`vyper`（内部异常）。
 
 <h2 id="compiler-settings">编译设置</h2>
 
-`refer/docs/compiling-a-contract.rst` 里最值得提前掌握的是三类设置：
+### 优化模式
 
 ```bash
-vyper --optimize codesize Counter.vy
-vyper --evm-version prague Counter.vy
-vyper -Werror Counter.vy
+vyper --optimize gas Counter.vy      # 默认：优化 gas 消耗
+vyper --optimize codesize Counter.vy  # 优化代码大小
+vyper --optimize none Counter.vy      # 不优化
 ```
 
-- `--optimize gas|codesize|none`：决定优化偏向。
-- `--evm-version`：确保字节码行为与目标链分叉一致。
-- `-Werror`：把警告提升为错误，适合 CI。
+| 模式 | 选择器表 | 常量处理 | 循环处理 |
+| --- | --- | --- | --- |
+| `gas`（默认） | 稀疏选择器表，优化 gas | 内联常量 | 尝试展开循环 |
+| `codesize` | 密集选择器表 | 外联代码 | 使用循环复制数据 |
+| `none` | 最小优化 | — | — |
 
-此外，如果你在排查重入锁或状态布局，`vyper -f layout` 往往比盲猜存储槽更直接。
+### EVM 版本
+
+```bash
+vyper --evm-version prague Counter.vy
+```
+
+也可以在源码中指定：
+
+```vyper
+#pragma evm-version prague
+```
+
+如果 CLI 选项与源码 pragma 冲突，编译器会抛出异常。
+
+支持的版本：
+
+| 版本 | 关键变化 |
+| --- | --- |
+| `london` | 基准版本 |
+| `paris` | `block.difficulty` 弃用，改用 `block.prevrandao` |
+| `shanghai` | 编译器自动生成 `PUSH0` 替代 `PUSH1 0` |
+| `cancun` | 支持 `transient` 关键字；`@nonreentrant` 使用 TLOAD/TSTORE；自动生成 `MCOPY` |
+| `prague`（默认） | 当前默认版本 |
+
+<Callout title="EVM 版本的重要性">
+  为错误的 EVM 版本编译可能导致错误、异常或不可预测的行为。
+  特别是运行私有链时，务必确保 EVM 版本匹配。
+</Callout>
+
+### Venom 实验后端
+
+使用 `--experimental-codegen`（或别名 `--venom-experimental`）启用新的 Venom IR 管线。
+Venom IR 受 LLVM IR 启发，支持更先进的分析和优化。
+
+```bash
+vyper --experimental-codegen Counter.vy
+```
+
+### 警告控制
+
+```bash
+vyper -Wnone Counter.vy    # 抑制所有警告
+vyper -Werror Counter.vy   # 将警告提升为错误（推荐用于 CI）
+```
+
+### 完整性哈希
+
+`-f integrity` 输出合约的完整性哈希——基于源码及其依赖（导入）和存储布局覆盖的递归 SHA-256 哈希。
+用于工具链检测两次构建是否相同。
+
+### Vyper 归档
+
+Vyper 归档（`.vyz`）是包含编译输入和设置的 ZIP 包，可直接作为编译器输入：
+
+```bash
+# 生成归档
+vyper -f archive Counter.vy -o Counter.vyz
+
+# 生成 base64 编码归档
+vyper -f archive Counter.vy --base64 > Counter.vyz.b64
+
+# 编译归档
+vyper Counter.vyz
+vyper Counter.vyz.b64
+```
+
+归档内部结构包含 `MANIFEST/` 目录：`cli_settings.txt`、`compilation_targets`、`compiler_version`、`integrity`、`settings.json`、`searchpaths`，以及可选的 `storage_layout.json`。
+
+### 在线编译器
+
+- [Try VyperLang!](https://try.vyperlang.org)：Vyper 团队维护的 JupyterHub 沙箱，支持浏览器内部署
+- [Remix IDE](https://remix.ethereum.org)：支持 Vyper 和 Solidity 的在线 IDE
 
 <Callout title="工程建议">
-  把编译参数写入项目脚本或 CI，而不是靠人肉记忆。对合约项目来说，可复现性本身就是安全性的一部分。
+  把编译参数写入项目脚本或 CI，而不是靠人肉记忆。
+  对合约项目来说，可复现性本身就是安全性的一部分。
+  推荐使用 Vyper 归档来确保编译的可复现性。
 </Callout>

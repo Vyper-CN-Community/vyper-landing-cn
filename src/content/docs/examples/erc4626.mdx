@@ -1,0 +1,56 @@
+<Lead>
+  ERC-4626 代币化金库合约：标准化收益聚合金库，将存入的 ERC-20 资产转化为可组合的份额代币。
+</Lead>
+
+<Callout title="学习用途">
+  本示例仅用于学习目的。完整合约代码较长，请参阅
+  [源码文件](https://github.com/vyperlang/vyper/blob/master/examples/tokens/ERC4626.vy)。
+</Callout>
+
+<h2 id="overview">概览</h2>
+
+ERC-4626 定义了代币化金库的标准接口，使得不同的 DeFi 协议可以统一处理收益聚合。核心概念：
+
+- 用户存入底层资产（ERC-20 代币），获得金库份额
+- 份额代表用户在金库中的比例
+- 随着金库产生收益，份额的价值增长
+- 用户可随时赎回份额换回底层资产
+
+<h2 id="contract-code">核心结构</h2>
+
+```vyper
+#pragma version >0.3.10
+
+from ethereum.ercs import IERC20
+from ethereum.ercs import IERC4626
+
+implements: IERC20
+implements: IERC4626
+
+totalSupply: public(uint256)
+balanceOf: public(HashMap[address, uint256])
+allowance: public(HashMap[address, HashMap[address, uint256]])
+
+asset: public(IERC20)
+```
+
+<h2 id="walkthrough">代码解析</h2>
+
+### 资产与份额的转换
+
+`convertToShares` 和 `convertToAssets` 实现资产与份额之间的换算。当金库总资产为零时，汇率为 1:1；否则按比例计算。
+
+### 存取操作
+
+- `deposit`：存入指定数量的资产，铸造相应份额
+- `mint`：铸造指定数量的份额，扣取相应资产
+- `withdraw`：取出指定数量的资产，销毁相应份额
+- `redeem`：赎回指定数量的份额，返还相应资产
+
+### 预览函数
+
+`previewDeposit`、`previewMint`、`previewWithdraw`、`previewRedeem` 让用户在执行前预估结果，无需消耗 gas。
+
+### 最大值限制
+
+`maxDeposit`、`maxMint`、`maxWithdraw`、`maxRedeem` 返回当前条件下各操作的最大允许值。
