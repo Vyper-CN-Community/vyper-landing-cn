@@ -6,8 +6,16 @@ import { cn } from '@/lib/utils/shadcn'
 import { CodeHighlight } from '@/ui/components/shared/code-highlight'
 import { SourceCode } from '@/ui/docs/source-code'
 
-function Lead({ className, ...props }: ComponentPropsWithoutRef<'p'>) {
-  return <p className={cn('text-lg text-muted-foreground leading-8', className)} {...props} />
+function Lead({ className, ...props }: ComponentPropsWithoutRef<'div'>) {
+  return (
+    <div
+      className={cn(
+        'text-lg text-muted-foreground leading-8 [&_p]:text-lg [&_p]:text-muted-foreground [&_p]:leading-8',
+        className,
+      )}
+      {...props}
+    />
+  )
 }
 
 function Callout({
