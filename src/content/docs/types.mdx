@@ -1,0 +1,80 @@
+<Lead>
+  Vyper 是静态类型语言。变量、参数和返回值的类型必须在编译期明确，
+  这使得很多模糊行为在进入链上之前就会被拦住。
+</Lead>
+
+<h2 id="type-discipline">静态类型约束</h2>
+
+`refer/docs/types.rst` 强调了一个核心点：Vyper 没有“模糊子类型层级”。
+值在赋值和传参时都按值复制，这能减少调用方对共享可变状态的猜测。
+
+你可以把它理解为：
+
+- 类型越明确，调用边界越清晰。
+- 编译器知道得越多，运行时越不容易出现“看起来能跑，实际上有坑”的情况。
+- 显式转换优先于隐式魔法。
+
+<h2 id="scalar-types">标量类型</h2>
+
+最常见的基础类型包括：
+
+| 类型 | 说明 |
+| --- | --- |
+| `bool` | 只有 `True` 和 `False`。 |
+| `intN` | 有符号整数，`N` 为 8 到 256 的 8 倍数。 |
+| `uintN` | 无符号整数，适合金额、索引和计数。 |
+| `decimal` | 十进制定点数，需要显式启用 decimal 支持。 |
+| `address` | 20 字节地址值。 |
+| `Bytes[N]` / `String[N]` | 定长上限的字节串与字符串。 |
+
+示例：
+
+```vyper
+is_active: bool = True
+counter: uint256 = 0
+delta: int128 = -5
+price: decimal = 0.1
+recipient: address = 0x1234567890123456789012345678901234567890
+```
+
+<h2 id="collections">集合类型</h2>
+
+Vyper 的集合类型也强调“边界必须已知”：
+
+```vyper
+balances: HashMap[address, uint256]
+recent_scores: DynArray[uint256, 32]
+fixed_slots: uint256[8]
+
+struct User:
+    owner: address
+    points: uint256
+```
+
+- `HashMap` 适合无界键值访问。
+- `DynArray[T, N]` 允许动态长度，但最大容量必须提前声明。
+- 固定数组更容易推导 gas 行为。
+- `struct` 用于组织相关字段，增强可读性。
+
+<Callout title="为什么要强制上界">
+  无上界的数据结构会让 gas 成本和执行路径变得难以预测。Vyper 通过类型系统把这种风险提前收窄。
+</Callout>
+
+<h2 id="conversion-rules">转换规则</h2>
+
+Vyper 对潜在有损或语义差异明显的转换要求显式 `convert()`：
+
+```vyper
+x: uint256 = 100
+y: int256 = convert(x, int256)
+
+who: address = 0x1234567890123456789012345678901234567890
+who_as_num: uint160 = convert(who, uint160)
+```
+
+实践上可以记住这条简单规则：
+
+- 自动放宽通常可以接受，例如较小无符号整数向较大整数扩展。
+- 只要涉及地址、符号位、精度或截断风险，就写 `convert()`。
+
+这样做虽然多敲一点字，但能显著降低审计时的歧义。

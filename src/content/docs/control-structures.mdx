@@ -1,0 +1,101 @@
+<Lead>
+  在 Vyper 里，函数定义和控制流几乎就是安全边界本身。可见性、可变性、循环上界和重入保护，
+  都直接体现在语法层里，而不是藏在惯例或辅助库中。
+</Lead>
+
+<h2 id="visibility">函数可见性</h2>
+
+Vyper 常见的可见性有三种：
+
+| 标记 | 含义 |
+| --- | --- |
+| `@external` | 进入 ABI，可被外部调用。 |
+| `@internal` | 只在合约内部调用；从 0.4.0 起可以省略，未标注时默认为 internal。 |
+| `@deploy` | 部署阶段执行，通常只用于 `__init__()`。 |
+
+示例：
+
+```vyper
+def _times_two(amount: uint256) -> uint256:
+    return amount * 2
+
+@external
+def calculate(amount: uint256) -> uint256:
+    return self._times_two(amount)
+```
+
+<h2 id="mutability">函数可变性</h2>
+
+可变性标记描述函数是否读取状态、修改状态或接收 ETH：
+
+| 标记 | 含义 |
+| --- | --- |
+| `@pure` | 不读状态，也不读环境变量。 |
+| `@view` | 读状态，不改状态。 |
+| `@nonpayable` | 默认值；可读写状态，但不能接收 ETH。 |
+| `@payable` | 可读写状态，并能访问 `msg.value`。 |
+
+```vyper
+@view
+@external
+def total() -> uint256:
+    return self.balance
+
+@payable
+@external
+def deposit():
+    self.balance += msg.value
+```
+
+`@view` 和 `@pure` 的意义不仅是文档说明，它们会影响底层调用方式和编译器检查强度。
+
+<h2 id="constructor">构造函数</h2>
+
+构造函数写作 `__init__()`，并由 `@deploy` 标记：
+
+```vyper
+owner: address
+
+@deploy
+def __init__():
+    self.owner = msg.sender
+```
+
+这一步通常用来：
+
+- 初始化 owner 或管理员地址。
+- 设置 immutable 变量。
+- 调用已初始化模块的构造逻辑。
+
+<h2 id="loops-and-guards">循环与保护措施</h2>
+
+Vyper 的循环必须有编译期可知的上界：
+
+```vyper
+for i: uint256 in range(100):
+    ...
+
+for i: uint256 in range(count, bound=100):
+    ...
+```
+
+这直接排除了“无上界遍历把函数 gas 打爆”的一整类问题。
+
+同时，Vyper 把很多安全约束做成了显式语法：
+
+```vyper
+@external
+@nonreentrant
+def withdraw():
+    assert msg.sender == self.owner
+    ...
+```
+
+- `assert` 和 `raise` 让失败路径留在函数体内，而不是藏在 modifier。
+- `@nonreentrant` 由编译器生成锁逻辑，保护同合约内的重入路径。
+- 外部调用用 `extcall` 或 `staticcall` 显式标注，便于审查。
+
+<Callout title="控制流的审计视角">
+  当你读一段 Vyper 代码时，优先找 `@external`、`@payable`、`@nonreentrant` 和 `extcall`。
+  这些标记几乎总能快速暴露资金流和风险边界。
+</Callout>

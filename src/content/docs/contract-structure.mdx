@@ -1,0 +1,89 @@
+<Lead>
+  Vyper 的一个重要特点是“文件结构即语义结构”。一份合约文件通常只描述一个合约，
+  并把版本约束、导入、状态、函数和事件都放在清晰可扫描的位置。
+</Lead>
+
+<h2 id="pragmas">Pragma 与编译指令</h2>
+
+`refer/docs/structure-of-a-contract.rst` 把 pragma 放在最前面，这是一个很好的习惯。
+
+常见指令包括：
+
+```vyper
+#pragma version ^0.4.0
+#pragma optimize gas
+#pragma evm-version prague
+```
+
+- `version` 控制编译器版本范围，帮助复现实验结果。
+- `optimize` 决定更偏向 gas 还是 codesize。
+- `evm-version` 把产物对齐到目标链的分叉规则。
+
+如果你在源码里写了 pragma，同时又在 CLI 里传了冲突参数，编译会直接报错，而不是帮你“猜”最终意图。
+
+<h2 id="imports">导入与搜索路径</h2>
+
+Vyper 支持 `import` 和 `from ... import` 两种形式：
+
+```vyper
+import ownable
+import my_package.foo as helper
+from . import math_utils
+from ..interfaces import IERC20
+```
+
+搜索导入文件时，编译器会先从当前合约所在目录开始，再看命令行传入的搜索路径。
+如果你用 CLI 编译复杂项目，通常会显式传 `-p`：
+
+```bash
+vyper -p contracts contracts/Vault.vy
+```
+
+<h2 id="state-and-functions">状态与函数</h2>
+
+状态变量定义在函数外部：
+
+```vyper
+owner: address
+stored_value: uint256
+```
+
+在函数内部通过 `self` 访问：
+
+```vyper
+@external
+def set_value(next_value: uint256):
+    self.stored_value = next_value
+```
+
+Vyper 不鼓励把逻辑拆散到太多隐式层级里，所以大多数行为最终都会落在可直接阅读的函数体中。
+
+<h2 id="events-and-interfaces">事件与接口</h2>
+
+事件写法非常直接：
+
+```vyper
+event Payment:
+    amount: uint256
+    sender: indexed(address)
+
+@external
+@payable
+def pay():
+    log Payment(msg.value, msg.sender)
+```
+
+接口既可以单独放在 `.vyi` 文件，也可以通过模块和接口导入获得：
+
+```vyper
+from .interfaces import IERC20
+
+@external
+def sweep(token: IERC20, to: address, amount: uint256):
+    extcall token.transfer(to, amount)
+```
+
+<Callout title="阅读建议">
+  当你审一份 Vyper 合约时，先看 pragma，再看 import，然后从状态变量扫到外部函数。
+  这种顺序通常能最快让你建立“这份合约控制了什么状态、暴露了什么能力”的整体图景。
+</Callout>

@@ -1,0 +1,74 @@
+<Lead>
+  编译器不是文档最后才需要看的工具。相反，越早理解 `vyper` 和 `vyper-json` 的输出能力，
+  你越容易在开发、调试和审计阶段建立稳定的工程习惯。
+</Lead>
+
+<h2 id="cli-basics">CLI 基础</h2>
+
+Vyper 主要提供两套入口：
+
+- `vyper`：命令行直接编译单个合约或归档。
+- `vyper-json`：通过标准 JSON 输入输出，与构建系统更容易集成。
+
+最小编译命令：
+
+```bash
+vyper Counter.vy
+```
+
+如果有导入路径，通常会写成：
+
+```bash
+vyper -p contracts contracts/Counter.vy
+```
+
+<h2 id="output-formats">常见产物</h2>
+
+`-f` 参数可以输出多种格式，例如 ABI、字节码、布局和接口：
+
+```bash
+vyper -f abi,bytecode,layout Counter.vy
+```
+
+实践上最常用的几类产物是：
+
+- `abi`：前端、脚本和测试都要用。
+- `bytecode` / `bytecode_runtime`：部署与验证时常见。
+- `layout`：分析状态变量布局，尤其适合审计和升级场景。
+- `interface` / `external_interface`：生成可复用接口定义。
+- `blueprint_bytecode`：做 blueprint 工厂时会用到。
+
+<h2 id="json-interface">JSON 接口</h2>
+
+如果你的构建系统更偏自动化，`vyper-json` 会更自然：
+
+```bash
+vyper-json project.json -o compiled.json
+```
+
+它会优先从输入 JSON 中的这些位置解析依赖：
+
+1. `interfaces`
+2. `sources`
+
+这意味着你可以把编译输入打包成一个可复现的描述文件，而不是依赖本地目录巧合。
+
+<h2 id="compiler-settings">编译设置</h2>
+
+`refer/docs/compiling-a-contract.rst` 里最值得提前掌握的是三类设置：
+
+```bash
+vyper --optimize codesize Counter.vy
+vyper --evm-version prague Counter.vy
+vyper -Werror Counter.vy
+```
+
+- `--optimize gas|codesize|none`：决定优化偏向。
+- `--evm-version`：确保字节码行为与目标链分叉一致。
+- `-Werror`：把警告提升为错误，适合 CI。
+
+此外，如果你在排查重入锁或状态布局，`vyper -f layout` 往往比盲猜存储槽更直接。
+
+<Callout title="工程建议">
+  把编译参数写入项目脚本或 CI，而不是靠人肉记忆。对合约项目来说，可复现性本身就是安全性的一部分。
+</Callout>

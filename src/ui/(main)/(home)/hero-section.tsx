@@ -42,9 +42,7 @@ export const HeroSection: FC<ComponentProps<'div'>> = () => {
         <FadeIn delay={0.3}>
           <div className="mt-10 flex items-center gap-4">
             <Link
-              href="https://docs.vyperlang.org/en/latest/"
-              target="_blank"
-              rel="noopener noreferrer"
+              href="/docs"
               className="inline-flex h-10 items-center rounded-lg bg-foreground px-5 font-medium text-background text-sm transition-opacity hover:opacity-90"
             >
               开始使用

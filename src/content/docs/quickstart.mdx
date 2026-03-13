@@ -1,0 +1,96 @@
+<Lead>
+  `refer/docs/quickstart.rst` 推荐新项目默认使用 Moccasin。它围绕 Vyper 工作流设计，
+  能把脚手架、编译、测试和部署都统一在一套命令里。
+</Lead>
+
+<h2 id="recommended-stack">推荐工具链</h2>
+
+如果你刚开始接触 Vyper，不要直接沿用 Solidity 时代的习惯去搭 Foundry 或 Hardhat。
+Vyper 官方文档更推荐：
+
+- 用 Moccasin 建项目。
+- 用 Titanoboa / pytest 跑测试。
+- 用 Vyper 原生工具链理解语言特性，而不是先绕进兼容层。
+
+安装 Moccasin：
+
+```bash
+uv tool install moccasin
+mox --version
+```
+
+<Callout title="何时不选 Moccasin">
+  如果你已经有成熟的多语言仓库，或者必须接入既有 JS 构建系统，可以考虑 Ape 或 Hardhat 插件。
+  但对于新手和纯 Vyper 项目，Moccasin 的路径更短。
+</Callout>
+
+<h2 id="project-bootstrap">初始化项目</h2>
+
+创建项目：
+
+```bash
+mox init my_project
+cd my_project
+```
+
+你会得到一个类似这样的目录：
+
+```text
+my_project/
+├── src/
+├── tests/
+├── script/
+└── moccasin.toml
+```
+
+这个结构已经覆盖了最常见的合约开发流程：源代码、测试和部署脚本分开管理。
+
+<h2 id="first-contract">第一个合约</h2>
+
+一个最小的 Vyper 合约通常长这样：
+
+```vyper
+#pragma version ^0.4.1
+
+number: public(uint256)
+
+@external
+def set_number(new_number: uint256):
+    self.number = new_number
+
+@external
+def increment():
+    self.number += 1
+```
+
+这个示例同时展示了三件最重要的事：
+
+- `#pragma version` 用来锁定编译器版本范围。
+- `public(uint256)` 会生成状态变量和自动 getter。
+- `@external` 让函数进入对外 ABI。
+
+<h2 id="compile-and-test">编译与测试</h2>
+
+编译项目：
+
+```bash
+mox compile
+```
+
+运行测试：
+
+```bash
+mox test
+```
+
+正常情况下你会看到 pytest 风格的通过输出。接下来建议立刻做两件事：
+
+1. 打开 `src/` 里的示例合约，手动改一个状态变量和一个函数参数类型。
+2. 写一个最小测试，验证 getter 和状态更新是否符合预期。
+
+这样你会比单纯阅读语法说明更快建立“Vyper 合约是怎么被编译和调用的”直觉。
+
+<Callout title="常见问题">
+  如果 `mox` 命令不可用，优先检查 shell 是否刷新；如果是 Python 版本不对，
+  先修复 Python 环境，再重新安装 Moccasin。
+</Callout>

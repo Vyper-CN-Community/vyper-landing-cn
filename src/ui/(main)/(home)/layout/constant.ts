@@ -7,9 +7,9 @@ export const routes: { name: string; href: string; pattern: RegExp; external: bo
   },
   {
     name: '文档',
-    href: 'https://docs.vyperlang.org/en/latest/',
+    href: '/docs',
     pattern: /^\/docs($|\/)/,
-    external: true,
+    external: false,
   },
   {
     name: '贡献',

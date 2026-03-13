@@ -1,0 +1,95 @@
+<Lead>
+  Vyper 不提供类继承，而是鼓励用模块化组合复用代码。模块可以同时携带函数、类型和状态，
+  但状态能否被访问、外部函数是否暴露，都必须显式声明。
+</Lead>
+
+<h2 id="module-basics">模块的基本概念</h2>
+
+在 Vyper 里，任意 `.vy` 文件都可以被当成模块导入。下面这个文件既是合约，也是一块可复用逻辑：
+
+```vyper
+# ownable.vy
+
+owner: address
+
+@deploy
+def __init__():
+    self.owner = msg.sender
+
+def _check_owner():
+    assert self.owner == msg.sender
+```
+
+然后在其他文件中导入：
+
+```vyper
+import ownable
+```
+
+<h2 id="initialize-state">初始化状态</h2>
+
+如果模块依赖自身状态，就需要通过 `initializes` 显式接入：
+
+```vyper
+import ownable
+
+initializes: ownable
+
+@deploy
+def __init__():
+    ownable.__init__()
+
+@external
+def admin_only():
+    ownable._check_owner()
+```
+
+这条语法很重要，因为它明确说明了“这个合约负责管理该模块的状态布局”。
+
+<h2 id="uses-and-dependencies">uses 与依赖</h2>
+
+如果你只想使用另一个模块的状态，但不想在当前层完成初始化，可以用 `uses`：
+
+```vyper
+import ownable
+
+uses: ownable
+```
+
+更复杂的情况是模块依赖模块。这时可以在 `initializes` 里用 walrus 语法把依赖关系写清楚：
+
+```vyper
+import ownable
+import ownable_2step
+
+initializes: ownable
+initializes: ownable_2step[ownable := ownable]
+```
+
+这种写法啰嗦，但可读性非常高。状态来源、依赖方向和初始化责任都写在源码表层。
+
+<h2 id="exports">导出外部接口</h2>
+
+模块的 `@external` 函数不会自动暴露到最终 ABI。你必须显式 `exports`：
+
+```vyper
+exports: ownable.transfer_ownership
+exports: ownable.__interface__
+```
+
+如果你只是把模块当作远程接口，也可以用 `__at__()`：
+
+```vyper
+import ownable
+
+an_ownable: ownable.__interface__
+
+@external
+def bind(addr: address):
+    self.an_ownable = ownable.__at__(addr)
+```
+
+<Callout title="模块系统的收益">
+  模块化组合替代继承后，外部可见函数、状态所有权和依赖关系都变得更显式。
+  对审计者来说，这比在多重继承层级里追踪解析顺序要简单得多。
+</Callout>

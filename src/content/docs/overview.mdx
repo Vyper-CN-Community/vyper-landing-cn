@@ -1,0 +1,80 @@
+<Lead>
+  Vyper 是一门面向 EVM 的 Pythonic 智能合约语言。它优先考虑安全性、简洁性和可审计性，
+  用更少的语言特性换来更稳定的合约边界和更可预测的运行行为。
+</Lead>
+
+<h2 id="why-vyper">为什么是 Vyper</h2>
+
+`refer/docs/index.rst` 把 Vyper 的定位讲得很明确：它不是为了“语法炫技”，而是为了让合约在审计、
+维护和链上执行时都更容易推理。
+
+- 默认开启溢出与边界检查，减少常见漏洞面。
+- 使用显式的外部调用关键字，例如 `extcall` 和 `staticcall`，让危险边界一眼可见。
+- 放弃继承、修饰器、内联汇编和无限循环，换取更直观的控制流。
+- 保持与 Python 接近的阅读体验，让代码更适合人工审查。
+
+<Callout title="适合谁阅读">
+  如果你已经写过 Solidity，这套文档更适合作为“迁移手册”；如果你第一次接触 EVM 合约，
+  则建议按左侧顺序从安装和快速开始一路读到模块与编译。
+</Callout>
+
+<h2 id="learning-path">推荐学习路径</h2>
+
+建议按下面的节奏阅读：
+
+1. 先把本地环境跑通，确认你能安装编译器并生成字节码。
+2. 用 Moccasin 初始化一个最小项目，把编译和测试命令先跑通。
+3. 理解合约文件的组织方式，再看类型系统和函数控制流。
+4. 开始接触模块、内建函数和编译参数等进阶主题。
+5. 最后再回头理解 Vyper 与 Solidity 的设计差异，建立自己的编码习惯。
+
+<h2 id="core-principles">核心设计原则</h2>
+
+| 原则 | 实际含义 |
+| --- | --- |
+| 安全性 | 语言层面主动排除高风险能力，例如递归、无限循环和内联汇编。 |
+| 简洁性 | 代码路径尽量线性，函数读起来像普通 Python，而不是依赖隐式魔法。 |
+| 可审计性 | 写代码时优先照顾读者和审计者，而不是只照顾作者的书写便利。 |
+
+这也是为什么 Vyper 的很多“限制”其实是刻意的产品设计。它希望你在合约开发时少依赖技巧，多依赖明确结构。
+
+<h2 id="documentation-map">文档地图</h2>
+
+<CardGrid>
+  <DocCard
+    href="/docs/installing-vyper"
+    eyebrow="入门"
+    title="安装 Vyper"
+    description="选择 uv、pipx、pip 或 Docker，并确认本地编译器可用。"
+  />
+  <DocCard
+    href="/docs/quickstart"
+    eyebrow="入门"
+    title="5 分钟快速开始"
+    description="用 Moccasin 创建第一个项目，跑通编译和测试闭环。"
+  />
+  <DocCard
+    href="/docs/contract-structure"
+    eyebrow="语言基础"
+    title="合约结构"
+    description="理解 pragma、导入、状态变量、事件和接口的组织方式。"
+  />
+  <DocCard
+    href="/docs/types"
+    eyebrow="语言基础"
+    title="类型系统"
+    description="掌握整数、十进制定点数、数组、映射和显式转换。"
+  />
+  <DocCard
+    href="/docs/modules"
+    eyebrow="进阶"
+    title="模块与组合"
+    description="使用 initializes、uses 和 exports 组织可复用合约。"
+  />
+  <DocCard
+    href="/docs/compiling"
+    eyebrow="工具与规范"
+    title="编译与产物"
+    description="理解 CLI 输出、EVM 版本和优化模式。"
+  />
+</CardGrid>

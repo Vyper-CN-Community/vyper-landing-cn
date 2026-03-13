@@ -5,6 +5,10 @@
 @custom-variant dark (&:where(.dark, .dark *));
 
 @layer base {
+  html {
+    scroll-behavior: smooth;
+  }
+
   body {
     @apply bg-background text-foreground antialiased;
   }
@@ -23,5 +27,23 @@
   .dark .shiki span {
     color: var(--shiki-dark) !important;
     background-color: var(--shiki-dark-bg) !important;
+  }
+}
+
+@layer utilities {
+  .docs-scrollbar {
+    scrollbar-width: thin;
+    scrollbar-color: color-mix(in oklab, var(--foreground) 14%, transparent) transparent;
+  }
+
+  .docs-scrollbar::-webkit-scrollbar {
+    width: 10px;
+  }
+
+  .docs-scrollbar::-webkit-scrollbar-thumb {
+    background: color-mix(in oklab, var(--foreground) 14%, transparent);
+    border: 2px solid transparent;
+    border-radius: 999px;
+    background-clip: padding-box;
   }
 }

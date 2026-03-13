@@ -6,7 +6,7 @@ const footerLinks = [
   {
     title: '资源',
     links: [
-      { name: '文档', href: 'https://docs.vyperlang.org/en/latest/', external: true },
+      { name: '文档', href: '/docs', external: false },
       { name: '博客', href: 'https://blog.vyperlang.org/', external: true },
       {
         name: '示例',

@@ -1,0 +1,80 @@
+<Lead>
+  安装 Vyper 的关键不是“能不能装上”，而是“装完之后能否稳定地复用在你的项目流程里”。
+  如果你只是想立即开始，优先选择 `uv tool` 或 `pipx` 这类隔离安装方式。
+</Lead>
+
+<h2 id="choose-path">如何选择安装路径</h2>
+
+| 场景 | 推荐方式 | 说明 |
+| --- | --- | --- |
+| 本地直接使用 CLI | `uv tool install vyper` | 最省心，隔离环境，升级简单。 |
+| 偏好 Python CLI 管理 | `pipx install vyper` | 与 `uv tool` 类似，也适合单独安装。 |
+| 在 Python 项目里作为依赖使用 | `pip install vyper` 或 `uv pip install vyper` | 适合已有虚拟环境的项目。 |
+| CI / 一次性编译环境 | Docker | 不依赖宿主机 Python 细节。 |
+
+<Callout title="前置条件">
+  `refer/docs/installing-vyper.rst` 明确要求 Python 3.11 或更高版本。开始安装前先执行
+  `python3 --version`，不要等到依赖编译失败后再回头排查版本问题。
+</Callout>
+
+<h2 id="standalone">独立安装</h2>
+
+如果你只是需要一个稳定的 `vyper` 命令，优先使用隔离安装：
+
+```bash
+uv tool install vyper
+```
+
+或者：
+
+```bash
+pipx install vyper
+```
+
+安装完成后，先验证命令是否可用：
+
+```bash
+vyper --version
+```
+
+如果 shell 提示找不到命令，通常不是 Vyper 本身的问题，而是你的 PATH 还没有刷新。
+
+<h2 id="python-project">Python 项目内安装</h2>
+
+如果你把 Vyper 当成 Python 项目依赖，先创建虚拟环境，再安装：
+
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+pip install vyper
+```
+
+或者用 `uv`：
+
+```bash
+uv venv
+source .venv/bin/activate
+uv pip install vyper
+```
+
+这种方式更适合你要把编译流程、测试工具和其他 Python 依赖放在同一个项目里统一管理。
+
+<h2 id="containers">Docker 与其他选项</h2>
+
+如果你更在意环境一致性，可以直接使用官方 Docker 镜像：
+
+```bash
+docker pull vyperlang/vyper
+docker run -v $(pwd):/code vyperlang/vyper /code/Counter.vy
+```
+
+除此之外，`refer/docs/installing-vyper.rst` 还提到了这些选择：
+
+- GitHub Releases 提供预编译二进制。
+- Nix 用户可以直接通过 `nixpkgs` 安装。
+- 只想临时试验语法时，可以先用在线环境，例如 Try Vyper 或 Remix。
+
+<Callout title="实践建议">
+  如果你的目标是开始写合约，不要一上来就纠结所有安装方式。先选一种最简单的方案跑通 `vyper --version`，
+  再进入快速开始章节。
+</Callout>

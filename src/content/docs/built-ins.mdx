@@ -1,0 +1,75 @@
+<Lead>
+  Vyper 没有把底层能力藏起来，它只是要求你通过显式内建函数去使用这些能力。
+  这样既保留了对 EVM 的访问，又尽量避免把整份合约变成难以审查的汇编拼图。
+</Lead>
+
+<h2 id="bitwise-and-deprecations">位运算与弃用项</h2>
+
+`refer/docs/built-in-functions.rst` 明确指出，一些旧内建已经被运算符替代：
+
+- `shift()` 已弃用，改用 `<<` 和 `>>`。
+- `bitwise_and`、`bitwise_or`、`bitwise_xor`、`bitwise_not` 已被对应运算符替换。
+
+这类调整的方向很一致：尽量让代码读起来更直接，而不是记住一套额外 API 名称。
+
+<h2 id="contract-creation">合约创建原语</h2>
+
+Vyper 常见的合约创建能力可以粗分为四类：
+
+| 能力 | 适用场景 | 关键特征 |
+| --- | --- | --- |
+| `create_minimal_proxy_to()` | 低成本克隆 | 创建便宜，调用有 `DELEGATECALL` 开销。 |
+| `create_copy_of()` | 复制运行时代码 | 部署贵一些，但调用更直接。 |
+| `create_from_blueprint()` | 基于 blueprint 部署 | 支持构造函数，适合工厂模式。 |
+| `raw_create()` | 底层 create / create2 | 自由度最高，也最需要自律。 |
+
+示例：
+
+```vyper
+@external
+def clone(target: address) -> address:
+    return create_minimal_proxy_to(target)
+```
+
+如果你用 blueprint，记得确认 `code_offset` 与部署前缀保持一致，否则很容易在运行时踩坑。
+
+<h2 id="low-level-calls">低层调用</h2>
+
+低层调用通常通过 `raw_call()` 完成：
+
+```vyper
+@external
+@payable
+def forward(target: address) -> Bytes[32]:
+    response: Bytes[32] = raw_call(
+        target,
+        method_id("ping()"),
+        max_outsize=32,
+        value=msg.value,
+    )
+    return response
+```
+
+需要重点关注的参数包括：
+
+- `max_outsize`：返回数据最大长度。
+- `value`：是否携带 ETH。
+- `is_delegate_call` / `is_static_call`：调用模式。
+- `revert_on_failure`：失败时是回滚还是返回成功标志。
+
+这类 API 没有被禁止，但使用者必须明确承担它的边界复杂度。
+
+<h2 id="safety-checklist">使用清单</h2>
+
+在使用底层原语前，建议逐项确认：
+
+1. 目标合约代码是否可信，尤其是 proxy 场景。
+2. 是否真的需要底层调用，而不是普通接口调用。
+3. 返回值长度和失败分支是否被显式处理。
+4. 对 blueprint / proxy 的生命周期和升级行为是否有清楚预期。
+5. 是否已经把这些关键边界写进测试和文档。
+
+<Callout title="经验规则">
+  底层能力不是不能用，而是只在你真正理解代价时再用。对多数业务合约而言，
+  越靠近接口级写法，越容易维护。
+</Callout>
