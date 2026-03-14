@@ -617,6 +617,21 @@ export const docsNavigation = navigationGroups.map(title => ({
   items: docs.filter(doc => doc.group === title),
 }))
 
+export function getDocSourcePath(slug?: string) {
+  const normalizedSlug = slug ?? ''
+
+  if (normalizedSlug === '') {
+    return 'src/content/docs/overview.mdx'
+  }
+
+  return `src/content/docs/${normalizedSlug}.mdx`
+}
+
+export function getDocEditHref(slug?: string) {
+  const sourcePath = getDocSourcePath(slug)
+  return `https://github.com/Vyper-CN-Community/vyper-landing-cn/blob/main/${sourcePath}`
+}
+
 export function getDocBySlug(slug?: string) {
   const normalizedSlug = slug ?? ''
   return docs.find(doc => doc.slug === normalizedSlug)

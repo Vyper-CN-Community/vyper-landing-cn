@@ -1,6 +1,12 @@
 import type { ComponentPropsWithoutRef, ReactNode } from 'react'
+import { Github } from 'lucide-react'
 import Link from 'next/link'
-import { type DocPage, docsNavigation, getAdjacentDocs } from '@/content/docs/registry'
+import {
+  type DocPage,
+  docsNavigation,
+  getAdjacentDocs,
+  getDocEditHref,
+} from '@/content/docs/registry'
 import { cn } from '@/lib/utils/shadcn'
 import { DocsSidebar } from '@/ui/docs/docs-sidebar'
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/ui/shadcn/accordion'
@@ -17,6 +23,7 @@ const docsSidebarSections = docsNavigation.map(section => ({
 export function DocsShell({ doc }: { doc: DocPage }) {
   const { previous, next } = getAdjacentDocs(doc.slug)
   const Content = doc.Content
+  const editHref = getDocEditHref(doc.slug)
 
   return (
     <div className="mx-auto w-full max-w-[1600px] px-4 md:grid md:grid-cols-[240px_minmax(0,1fr)_220px] md:gap-6 md:px-6 xl:grid-cols-[280px_minmax(0,1fr)_240px] xl:gap-8">
@@ -47,6 +54,18 @@ export function DocsShell({ doc }: { doc: DocPage }) {
 
           <div className="min-w-0 [&_h2]:mt-12 [&_h2]:mb-5 [&_h2]:scroll-mt-24 [&_h2]:border-border/70 [&_h2]:border-t [&_h2]:pt-8 [&_h2]:font-semibold [&_h2]:text-2xl [&_h2]:tracking-tight [&_h3]:mt-8 [&_h3]:mb-4 [&_h3]:scroll-mt-24 [&_h3]:font-medium [&_h3]:text-xl [&_h3]:tracking-tight [&_h4]:mt-6 [&_h4]:mb-3 [&_h4]:scroll-mt-24 [&_h4]:font-medium [&_h4]:text-lg [&_h4]:tracking-tight">
             <Content />
+          </div>
+
+          <div className="border-border/80 border-t pt-6">
+            <a
+              href={editHref}
+              target="_blank"
+              rel="noreferrer"
+              className="inline-flex items-center gap-2 rounded-lg text-muted-foreground text-sm transition-colors hover:text-foreground"
+            >
+              <Github className="size-4" />
+              <span>在 GitHub 上编辑此页</span>
+            </a>
           </div>
 
           <footer className="grid gap-3 border-border/80 border-t pt-8 md:grid-cols-2">
