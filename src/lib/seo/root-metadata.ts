@@ -1,25 +1,38 @@
 import type { Metadata } from 'next'
-import siteConfig from './site-config.json'
-
-const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? siteConfig.siteUrl
-const siteName = siteConfig.siteName
-const siteLocale = siteConfig.siteLocale
+import {
+  siteDescription,
+  siteKeywords,
+  siteLocale,
+  siteName,
+  sitePublisher,
+  siteTitle,
+  siteUrl,
+} from './metadata-builders'
 
 const isProduction = process.env.NEXT_PUBLIC_ENVIRONMENT === 'production'
-const description = siteConfig.description
-const title = `${siteName} | ${siteConfig.titleSuffix}`
 
 export const rootMetadata: Metadata = {
   metadataBase: new URL(siteUrl),
   title: {
-    default: title,
+    default: siteTitle,
     template: `%s | ${siteName}`,
   },
-  description,
+  description: siteDescription,
   applicationName: siteName,
-  keywords: siteConfig.keywords,
+  keywords: siteKeywords,
+  authors: [
+    {
+      name: sitePublisher,
+      url: siteUrl,
+    },
+  ],
+  creator: sitePublisher,
+  publisher: sitePublisher,
   alternates: {
     canonical: '/',
+    languages: {
+      'zh-CN': '/',
+    },
     types: {
       'application/xml': `${siteUrl}/sitemap.xml`,
     },
@@ -28,14 +41,14 @@ export const rootMetadata: Metadata = {
     type: 'website',
     locale: siteLocale,
     url: '/',
-    siteName: siteName,
-    title,
-    description,
+    siteName,
+    title: siteTitle,
+    description: siteDescription,
   },
   twitter: {
     card: 'summary',
-    title: siteName,
-    description,
+    title: siteTitle,
+    description: siteDescription,
   },
   robots: {
     index: isProduction,

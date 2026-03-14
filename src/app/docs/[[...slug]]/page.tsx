@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 import { notFound } from 'next/navigation'
 import { docs, getDocBySlug } from '@/content/docs/registry'
+import { createDocMetadata } from '@/lib/seo/metadata-builders'
 import { DocsShell } from '@/ui/docs/docs-shell'
 
 type PageProps = {
@@ -26,13 +27,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     return {}
   }
 
-  return {
-    title: doc.title,
-    description: doc.description,
-    alternates: {
-      canonical: doc.href,
-    },
-  }
+  return createDocMetadata(doc)
 }
 
 export function generateStaticParams() {
