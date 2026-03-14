@@ -9,6 +9,7 @@ import {
 } from '@/content/docs/registry'
 import { cn } from '@/lib/utils/shadcn'
 import { DocsSidebar } from '@/ui/docs/docs-sidebar'
+import { DocsTableOfContents } from '@/ui/docs/docs-table-of-contents'
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/ui/shadcn/accordion'
 
 const shellTopOffset = 'sticky top-14 self-start h-[calc(100vh-3.5rem)]'
@@ -149,29 +150,6 @@ function DocsMobileSidebar({ currentHref }: { currentHref: string }) {
           </AccordionContent>
         </AccordionItem>
       </Accordion>
-    </div>
-  )
-}
-
-function DocsTableOfContents({ items }: { items: DocPage['toc'] }) {
-  if (items.length === 0) {
-    return null
-  }
-
-  return (
-    <div className="flex flex-col gap-4 py-6">
-      <p className="font-medium text-sm">本页目录</p>
-      <nav className="flex flex-col gap-1.5">
-        {items.map(item => (
-          <Link
-            key={item.id}
-            href={`#${item.id}`}
-            className="rounded-lg px-3 py-2 text-muted-foreground text-sm transition-colors hover:bg-accent hover:text-foreground"
-          >
-            {item.label}
-          </Link>
-        ))}
-      </nav>
     </div>
   )
 }
