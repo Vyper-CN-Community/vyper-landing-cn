@@ -1,8 +1,10 @@
 import type { ComponentProps, FC } from 'react'
+import { ArrowRight } from 'lucide-react'
 import Image from 'next/image'
 import Link from 'next/link'
 import { FadeIn } from '@/ui/components/shared/fade-in'
 import { MaxWidthWrapper } from '@/ui/components/shared/max-width-wrapper'
+import { Button } from '@/ui/shadcn/button'
 import snekDeveloper from './assets/sneks/snek-developer.png'
 
 export const HeroSection: FC<ComponentProps<'div'>> = () => {
@@ -40,21 +42,41 @@ export const HeroSection: FC<ComponentProps<'div'>> = () => {
         </FadeIn>
 
         <FadeIn delay={0.3}>
-          <div className="mt-10 flex items-center gap-4">
-            <Link
-              href="/docs"
-              className="inline-flex h-10 items-center rounded-lg bg-foreground px-5 font-medium text-background text-sm transition-opacity hover:opacity-90"
-            >
-              开始使用
-            </Link>
-            <Link
-              href="https://github.com/vyperlang/vyper"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex h-10 items-center rounded-lg border border-border px-5 font-medium text-sm transition-colors hover:bg-accent"
-            >
-              GitHub
-            </Link>
+          <div className="mt-10 flex flex-wrap items-center justify-center gap-4">
+            <div className="relative">
+              <span
+                aria-hidden
+                className="pointer-events-none absolute inset-0 rounded-xl bg-foreground/10 blur-xl motion-safe:animate-[pulse_3s_ease-in-out_infinite]"
+              />
+              <Button asChild size="lg" className="group relative overflow-hidden rounded-xl">
+                <Link href="/docs">
+                  <span
+                    aria-hidden
+                    className="pointer-events-none absolute inset-0 -translate-x-full bg-linear-to-r from-transparent via-background/20 to-transparent transition-transform duration-700 ease-out group-hover:translate-x-full"
+                  />
+                  <span className="relative flex items-center gap-2">
+                    <span aria-hidden className="relative flex size-2 items-center justify-center">
+                      <span className="absolute inset-0 rounded-full bg-background/70 motion-safe:animate-ping" />
+                      <span className="relative size-2 rounded-full bg-background" />
+                    </span>
+                    开始使用
+                    <ArrowRight
+                      data-icon="inline-end"
+                      className="transition-transform duration-300 group-hover:translate-x-0.5"
+                    />
+                  </span>
+                </Link>
+              </Button>
+            </div>
+            <Button asChild variant="outline" size="lg" className="rounded-xl">
+              <Link
+                href="https://github.com/vyperlang/vyper"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                GitHub
+              </Link>
+            </Button>
           </div>
         </FadeIn>
 

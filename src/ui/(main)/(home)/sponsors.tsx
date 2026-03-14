@@ -150,73 +150,85 @@ export const Sponsors: FC<ComponentProps<'section'>> = () => {
         </motion.div>
 
         <div className="mt-12 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          {sponsors.map((sponsor, index) => (
-            <Link
-              key={sponsor.name}
-              href={sponsor.link}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="group block rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-            >
-              <motion.article
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                whileHover={{ y: -2 }}
-                viewport={{ once: true, amount: 0.35 }}
-                transition={{ duration: 0.4, delay: index * 0.05, ease: 'easeOut' }}
-                className={cn(
-                  'relative h-full overflow-hidden rounded-xl border border-border p-5',
-                  sponsor.name === 'GCC' ? 'bg-amber-50/70 dark:bg-amber-950/25' : 'bg-card',
-                )}
+          {sponsors.map((sponsor, index) => {
+            const isGcc = sponsor.name === 'GCC'
+
+            return (
+              <Link
+                key={sponsor.name}
+                href={sponsor.link}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="group block rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
               >
-                <div className="pointer-events-none absolute inset-0 bg-gradient-to-br from-accent/60 via-background to-background opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
-
-                <div className="relative">
-                  <div className="flex items-center gap-3">
-                    <div className="relative h-11 w-11">
-                      {sponsor.name === 'GCC' && (
-                        <span
-                          aria-hidden
-                          className="absolute -top-5 left-1/2 -translate-x-1/2 text-xl leading-none"
-                        >
-                          👑
-                        </span>
-                      )}
-                      <div
-                        className={cn(
-                          'relative h-11 w-11 overflow-hidden rounded-md border border-border bg-background',
-                          sponsor.imageWrapperClassName,
-                        )}
-                      >
-                        <Image
-                          src={sponsor.image}
-                          alt={`${sponsor.name} logo`}
-                          fill
-                          className={cn(
-                            sponsor.imageMode === 'cover'
-                              ? 'object-cover p-0'
-                              : 'object-contain p-1',
-                            sponsor.imageClassName,
-                          )}
-                        />
-                      </div>
-                    </div>
-                    <h3 className="font-semibold text-base tracking-tight">{sponsor.name}</h3>
-                  </div>
-
-                  <p className="mt-3 text-muted-foreground text-sm leading-relaxed">
-                    {sponsor.description}
-                  </p>
-
-                  {sponsor.name === 'GCC' && (
-                    <p className="mt-4 border-border border-t pt-3 font-medium text-foreground text-xs leading-relaxed">
-                      特别感谢 GCC 赞助 Vyper 中文社区
-                    </p>
+                <motion.article
+                  initial={{ opacity: 0, y: 20 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  whileHover={isGcc ? { y: -2 } : undefined}
+                  viewport={{ once: true, amount: 0.35 }}
+                  transition={{ duration: 0.4, delay: index * 0.05, ease: 'easeOut' }}
+                  className={cn(
+                    'relative h-full overflow-hidden rounded-xl border border-border p-5',
+                    isGcc ? 'bg-amber-50/70 dark:bg-amber-950/25' : 'bg-card',
                   )}
-                </div>
-              </motion.article>
-            </Link>
-          ))}
+                >
+                  {!isGcc && (
+                    <div className="pointer-events-none absolute inset-0 bg-gradient-to-br from-accent/60 via-background to-background opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
+                  )}
+                  {isGcc && (
+                    <div
+                      aria-hidden
+                      className="pointer-events-none absolute inset-0 -translate-x-full bg-linear-to-r from-transparent via-background/80 to-transparent transition-transform duration-700 ease-out group-hover:translate-x-full"
+                    />
+                  )}
+
+                  <div className="relative">
+                    <div className="flex items-center gap-3">
+                      <div className="relative h-11 w-11">
+                        {isGcc && (
+                          <span
+                            aria-hidden
+                            className="absolute -top-5 left-1/2 -translate-x-1/2 text-xl leading-none"
+                          >
+                            👑
+                          </span>
+                        )}
+                        <div
+                          className={cn(
+                            'relative h-11 w-11 overflow-hidden rounded-md border border-border bg-background',
+                            sponsor.imageWrapperClassName,
+                          )}
+                        >
+                          <Image
+                            src={sponsor.image}
+                            alt={`${sponsor.name} logo`}
+                            fill
+                            className={cn(
+                              sponsor.imageMode === 'cover'
+                                ? 'object-cover p-0'
+                                : 'object-contain p-1',
+                              sponsor.imageClassName,
+                            )}
+                          />
+                        </div>
+                      </div>
+                      <h3 className="font-semibold text-base tracking-tight">{sponsor.name}</h3>
+                    </div>
+
+                    <p className="mt-3 text-muted-foreground text-sm leading-relaxed">
+                      {sponsor.description}
+                    </p>
+
+                    {isGcc && (
+                      <p className="mt-4 border-border border-t pt-3 font-medium text-foreground text-xs leading-relaxed">
+                        特别感谢 GCC 赞助 Vyper 中文社区
+                      </p>
+                    )}
+                  </div>
+                </motion.article>
+              </Link>
+            )
+          })}
         </div>
       </MaxWidthWrapper>
     </section>

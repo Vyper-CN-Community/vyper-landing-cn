@@ -96,7 +96,6 @@ export const VyperSecurityAduit: FC<ComponentProps<'section'>> = () => {
               <motion.article
                 initial={{ opacity: 0, y: 22 }}
                 whileInView={{ opacity: 1, y: 0 }}
-                whileHover={{ y: -2 }}
                 viewport={{ once: true, amount: 0.35 }}
                 transition={{ duration: 0.4, delay: index * 0.08, ease: 'easeOut' }}
                 className="relative h-full overflow-hidden rounded-xl border border-border bg-card p-5"
