@@ -1,5 +1,6 @@
 'use client'
 
+import { motion } from 'motion/react'
 import Link from 'next/link'
 import { useEffect, useLayoutEffect, useRef } from 'react'
 import { cn } from '@/lib/utils/shadcn'
@@ -98,13 +99,20 @@ export function DocsSidebar({
                     onClick={persistScrollPosition}
                     aria-current={currentHref === item.href ? 'page' : undefined}
                     className={cn(
-                      'rounded-xl border px-3 py-3 text-sm leading-6 transition-colors',
+                      'relative rounded-xl border px-3 py-3 text-sm leading-6 transition-colors',
                       currentHref === item.href
-                        ? 'border-transparent bg-card text-foreground'
+                        ? 'border-transparent font-semibold text-foreground'
                         : 'border-transparent text-muted-foreground hover:bg-accent hover:text-foreground',
                     )}
                   >
-                    {item.title}
+                    {currentHref === item.href ? (
+                      <motion.div
+                        layoutId="active-docs-sidebar-item"
+                        className="absolute inset-0 rounded-xl bg-accent/80"
+                        transition={{ type: 'spring', duration: 0.4, bounce: 0.15 }}
+                      />
+                    ) : null}
+                    <span className="relative z-10">{item.title}</span>
                   </Link>
                 ))}
               </div>
