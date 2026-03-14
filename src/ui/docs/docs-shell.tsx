@@ -57,7 +57,7 @@ export function DocsShell({ doc }: { doc: DocPage }) {
             <Content />
           </div>
 
-          <div className="border-border/80 border-t pt-6">
+          <div className="flex justify-end border-border/80 border-t pt-6">
             <a
               href={editHref}
               target="_blank"

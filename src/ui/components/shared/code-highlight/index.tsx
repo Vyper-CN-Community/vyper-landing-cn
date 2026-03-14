@@ -14,7 +14,7 @@ export const CodeHighlight: FC<{
     lang,
     themes: {
       light: 'github-light',
-      dark: 'github-dark',
+      dark: 'github-dark-high-contrast',
     },
     defaultColor: false,
   })

@@ -1,9 +1,10 @@
 'use client'
 
 import { Github } from 'lucide-react'
+import { AnimatePresence, motion } from 'motion/react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { memo } from 'react'
+import { memo, useEffect, useRef } from 'react'
 import { VyperLogo } from '@/ui/components/shared/vyper-logo'
 import { SwitchTheme } from '@/ui/shadcn/switch-theme'
 
@@ -14,7 +15,7 @@ type DocsHeaderEntry = {
 
 const DocsBrand = memo(function DocsBrand() {
   return (
-    <Link href="/" className="flex items-center gap-2">
+    <Link href="/" className="flex -translate-y-1 items-center gap-2">
       <VyperLogo className="size-5" />
       <h2 className="mt-1 -ml-1.5 font-bold font-mono text-2xl text-[#9f4cf2] tracking-tight">
         yper
@@ -31,9 +32,32 @@ function normalizePathname(pathname: string) {
   return pathname
 }
 
+const titleVariants = {
+  enter: (direction: number) => ({
+    opacity: 0,
+    y: direction > 0 ? 8 : -8,
+  }),
+  center: {
+    opacity: 1,
+    y: 0,
+  },
+  exit: (direction: number) => ({
+    opacity: 0,
+    y: direction > 0 ? -8 : 8,
+  }),
+}
+
 export function DocsHeader({ docs }: { docs: DocsHeaderEntry[] }) {
   const pathname = normalizePathname(usePathname())
-  const currentDoc = docs.find(doc => doc.href === pathname) ?? docs[0]
+  const currentIndex = docs.findIndex(doc => doc.href === pathname)
+  const resolvedIndex = currentIndex === -1 ? 0 : currentIndex
+  const previousIndexRef = useRef(resolvedIndex)
+  const currentDoc = docs[resolvedIndex] ?? docs[0]
+  const direction = resolvedIndex >= previousIndexRef.current ? 1 : -1
+
+  useEffect(() => {
+    previousIndexRef.current = resolvedIndex
+  }, [resolvedIndex])
 
   return (
     <header className="sticky top-0 z-50 border-border/80 border-b bg-background/95 backdrop-blur-xl">
@@ -41,9 +65,22 @@ export function DocsHeader({ docs }: { docs: DocsHeaderEntry[] }) {
         <div className="flex min-w-0 items-center gap-3">
           <DocsBrand />
           <span className="hidden h-4 w-px bg-border md:block" />
-          <p className="hidden truncate text-muted-foreground text-sm md:block">
-            {currentDoc.title}
-          </p>
+          <div className="hidden h-5 min-w-0 flex-1 overflow-hidden md:block">
+            <AnimatePresence mode="wait" initial={false} custom={direction}>
+              <motion.p
+                key={currentDoc.href}
+                custom={direction}
+                variants={titleVariants}
+                initial="enter"
+                animate="center"
+                exit="exit"
+                transition={{ duration: 0.18, ease: 'easeOut' }}
+                className="truncate text-muted-foreground text-sm"
+              >
+                {currentDoc.title}
+              </motion.p>
+            </AnimatePresence>
+          </div>
         </div>
         <div className="flex items-center gap-2">
           <Link
