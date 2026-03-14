@@ -2,10 +2,18 @@ import type { ComponentPropsWithoutRef, ReactNode } from 'react'
 import Link from 'next/link'
 import { type DocPage, docsNavigation, getAdjacentDocs } from '@/content/docs/registry'
 import { cn } from '@/lib/utils/shadcn'
+import { DocsSidebar } from '@/ui/docs/docs-sidebar'
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/ui/shadcn/accordion'
 import { SwitchTheme } from '@/ui/shadcn/switch-theme'
 
 const shellTopOffset = 'sticky top-14 self-start h-[calc(100vh-3.5rem)]'
+const docsSidebarSections = docsNavigation.map(section => ({
+  title: section.title,
+  items: section.items.map(item => ({
+    href: item.href,
+    title: item.title,
+  })),
+}))
 
 export function DocsShell({ doc }: { doc: DocPage }) {
   const { previous, next } = getAdjacentDocs(doc.slug)
@@ -39,9 +47,11 @@ export function DocsShell({ doc }: { doc: DocPage }) {
 
       <div className="mx-auto w-full max-w-[1600px] px-4 md:grid md:grid-cols-[240px_minmax(0,1fr)_220px] md:gap-6 md:px-6 xl:grid-cols-[280px_minmax(0,1fr)_240px] xl:gap-8">
         <aside className={cn('hidden md:block', shellTopOffset)}>
-          <div className="docs-scrollbar flex h-full flex-col overflow-y-auto border-border/80 border-r pr-6">
-            <DocsSidebar currentHref={doc.href} />
-          </div>
+          <DocsSidebar
+            currentHref={doc.href}
+            sections={docsSidebarSections}
+            className="border-border/80 border-r pr-6"
+          />
         </aside>
 
         <main className="min-w-0 py-6 md:py-10">
@@ -106,39 +116,6 @@ export function DocsShell({ doc }: { doc: DocPage }) {
           </div>
         </aside>
       </div>
-    </div>
-  )
-}
-
-function DocsSidebar({ currentHref }: { currentHref: string }) {
-  return (
-    <div className="py-6">
-      <nav className="flex flex-col gap-8">
-        {docsNavigation.map(section => (
-          <div key={section.title} className="flex flex-col gap-3">
-            <p className="px-3 font-medium text-muted-foreground text-xs uppercase tracking-[0.18em]">
-              {section.title}
-            </p>
-            <div className="flex flex-col gap-1">
-              {section.items.map(item => (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  aria-current={currentHref === item.href ? 'page' : undefined}
-                  className={cn(
-                    'rounded-xl border px-3 py-3 text-sm leading-6 transition-colors',
-                    currentHref === item.href
-                      ? 'border-transparent bg-card text-foreground'
-                      : 'border-transparent text-muted-foreground hover:bg-accent hover:text-foreground',
-                  )}
-                >
-                  {item.title}
-                </Link>
-              ))}
-            </div>
-          </div>
-        ))}
-      </nav>
     </div>
   )
 }
