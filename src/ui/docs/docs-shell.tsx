@@ -73,7 +73,7 @@ export function DocsShell({ doc }: { doc: DocPage }) {
               </div>
             </header>
 
-            <div className="min-w-0">
+            <div className="min-w-0 [&_h2]:mt-12 [&_h2]:mb-5 [&_h2]:scroll-mt-24 [&_h2]:border-border/70 [&_h2]:border-t [&_h2]:pt-8 [&_h2]:font-semibold [&_h2]:text-2xl [&_h2]:tracking-tight [&_h3]:mt-8 [&_h3]:mb-4 [&_h3]:scroll-mt-24 [&_h3]:font-medium [&_h3]:text-xl [&_h3]:tracking-tight [&_h4]:mt-6 [&_h4]:mb-3 [&_h4]:scroll-mt-24 [&_h4]:font-medium [&_h4]:text-lg [&_h4]:tracking-tight">
               <Content />
             </div>
 
