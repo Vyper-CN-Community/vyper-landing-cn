@@ -87,7 +87,7 @@ export function DocsSidebar({
         <nav className="flex flex-col gap-8">
           {sections.map(section => (
             <div key={section.title} className="flex flex-col gap-3">
-              <p className="px-3 font-medium text-muted-foreground text-xs uppercase tracking-[0.18em]">
+              <p className="px-3 font-semibold text-foreground/80 text-sm uppercase tracking-[0.18em]">
                 {section.title}
               </p>
               <div className="flex flex-col gap-1">

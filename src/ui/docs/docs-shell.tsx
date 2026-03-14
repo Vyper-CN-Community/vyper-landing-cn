@@ -4,7 +4,6 @@ import { type DocPage, docsNavigation, getAdjacentDocs } from '@/content/docs/re
 import { cn } from '@/lib/utils/shadcn'
 import { DocsSidebar } from '@/ui/docs/docs-sidebar'
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/ui/shadcn/accordion'
-import { SwitchTheme } from '@/ui/shadcn/switch-theme'
 
 const shellTopOffset = 'sticky top-14 self-start h-[calc(100vh-3.5rem)]'
 const docsSidebarSections = docsNavigation.map(section => ({
@@ -20,102 +19,74 @@ export function DocsShell({ doc }: { doc: DocPage }) {
   const Content = doc.Content
 
   return (
-    <div className="min-h-screen bg-background text-foreground">
-      <header className="sticky top-0 z-50 border-border/80 border-b bg-background/95 backdrop-blur-xl">
-        <div className="mx-auto flex h-14 w-full max-w-[1600px] items-center justify-between gap-6 px-4 md:px-6">
-          <div className="flex min-w-0 items-center gap-3">
-            <Link
-              href="/docs"
-              className="font-mono text-base tracking-tight transition-opacity hover:opacity-70"
-            >
-              Vyper Docs
-            </Link>
-            <span className="hidden h-4 w-px bg-border md:block" />
-            <p className="hidden truncate text-muted-foreground text-sm md:block">{doc.title}</p>
-          </div>
-          <div className="flex items-center gap-2">
-            <Link
-              href="/"
-              className="hidden rounded-md px-3 py-2 text-muted-foreground text-sm transition-colors hover:bg-accent hover:text-foreground md:inline-flex"
-            >
-              返回首页
-            </Link>
-            <SwitchTheme aria-label="切换主题" />
-          </div>
-        </div>
-      </header>
+    <div className="mx-auto w-full max-w-[1600px] px-4 md:grid md:grid-cols-[240px_minmax(0,1fr)_220px] md:gap-6 md:px-6 xl:grid-cols-[280px_minmax(0,1fr)_240px] xl:gap-8">
+      <aside className={cn('hidden md:block', shellTopOffset)}>
+        <DocsSidebar
+          currentHref={doc.href}
+          sections={docsSidebarSections}
+          className="border-border/80 border-r pr-6"
+        />
+      </aside>
 
-      <div className="mx-auto w-full max-w-[1600px] px-4 md:grid md:grid-cols-[240px_minmax(0,1fr)_220px] md:gap-6 md:px-6 xl:grid-cols-[280px_minmax(0,1fr)_240px] xl:gap-8">
-        <aside className={cn('hidden md:block', shellTopOffset)}>
-          <DocsSidebar
-            currentHref={doc.href}
-            sections={docsSidebarSections}
-            className="border-border/80 border-r pr-6"
-          />
-        </aside>
-
-        <main className="min-w-0 py-6 md:py-10">
-          <DocsMobileSidebar currentHref={doc.href} />
-          <article className="mx-auto flex w-full max-w-3xl flex-col gap-10">
-            <header className="flex flex-col gap-5 border-border/80 border-b pb-8">
-              <div className="flex items-center gap-3 text-muted-foreground text-xs uppercase tracking-[0.2em]">
-                <span>{doc.group}</span>
-                <span className="h-1 w-1 rounded-full bg-border" />
-                <span>Vyper 中文文档</span>
-              </div>
-              <div className="flex flex-col gap-3">
-                <h1 className="max-w-3xl text-balance font-semibold text-3xl tracking-tight sm:text-4xl">
-                  {doc.title}
-                </h1>
-                <p className="max-w-2xl text-lg text-muted-foreground leading-8">
-                  {doc.description}
-                </p>
-              </div>
-            </header>
-
-            <div className="min-w-0 [&_h2]:mt-12 [&_h2]:mb-5 [&_h2]:scroll-mt-24 [&_h2]:border-border/70 [&_h2]:border-t [&_h2]:pt-8 [&_h2]:font-semibold [&_h2]:text-2xl [&_h2]:tracking-tight [&_h3]:mt-8 [&_h3]:mb-4 [&_h3]:scroll-mt-24 [&_h3]:font-medium [&_h3]:text-xl [&_h3]:tracking-tight [&_h4]:mt-6 [&_h4]:mb-3 [&_h4]:scroll-mt-24 [&_h4]:font-medium [&_h4]:text-lg [&_h4]:tracking-tight">
-              <Content />
+      <main className="min-w-0 py-6 md:py-10">
+        <DocsMobileSidebar currentHref={doc.href} />
+        <article className="mx-auto flex w-full max-w-3xl flex-col gap-10">
+          <header className="flex flex-col gap-5 border-border/80 border-b pb-8">
+            <div className="flex items-center gap-3 text-muted-foreground text-xs uppercase tracking-[0.2em]">
+              <span>{doc.group}</span>
+              <span className="h-1 w-1 rounded-full bg-border" />
+              <span>Vyper 中文文档</span>
             </div>
+            <div className="flex flex-col gap-3">
+              <h1 className="max-w-3xl text-balance font-semibold text-3xl tracking-tight sm:text-4xl">
+                {doc.title}
+              </h1>
+              <p className="max-w-2xl text-lg text-muted-foreground leading-8">{doc.description}</p>
+            </div>
+          </header>
 
-            <footer className="grid gap-3 border-border/80 border-t pt-8 md:grid-cols-2">
-              <PagerCard
-                direction="上一页"
-                doc={previous}
-                className={!previous ? 'pointer-events-none opacity-40' : ''}
-              />
-              <PagerCard
-                direction="下一页"
-                doc={next}
-                align="right"
-                className={!next ? 'pointer-events-none opacity-40' : ''}
-              />
-            </footer>
-
-            {doc.toc.length > 0 ? (
-              <div className="rounded-2xl border border-border/80 bg-card/60 p-5 md:hidden">
-                <p className="font-medium text-sm">本页目录</p>
-                <nav className="mt-4 flex flex-col gap-2">
-                  {doc.toc.map(item => (
-                    <Link
-                      key={item.id}
-                      href={`#${item.id}`}
-                      className="rounded-md px-3 py-2 text-muted-foreground text-sm transition-colors hover:bg-accent hover:text-foreground"
-                    >
-                      {item.label}
-                    </Link>
-                  ))}
-                </nav>
-              </div>
-            ) : null}
-          </article>
-        </main>
-
-        <aside className={cn('hidden md:block', shellTopOffset)}>
-          <div className="docs-scrollbar h-full overflow-y-auto border-border/80 border-l pl-6">
-            <DocsTableOfContents items={doc.toc} />
+          <div className="min-w-0 [&_h2]:mt-12 [&_h2]:mb-5 [&_h2]:scroll-mt-24 [&_h2]:border-border/70 [&_h2]:border-t [&_h2]:pt-8 [&_h2]:font-semibold [&_h2]:text-2xl [&_h2]:tracking-tight [&_h3]:mt-8 [&_h3]:mb-4 [&_h3]:scroll-mt-24 [&_h3]:font-medium [&_h3]:text-xl [&_h3]:tracking-tight [&_h4]:mt-6 [&_h4]:mb-3 [&_h4]:scroll-mt-24 [&_h4]:font-medium [&_h4]:text-lg [&_h4]:tracking-tight">
+            <Content />
           </div>
-        </aside>
-      </div>
+
+          <footer className="grid gap-3 border-border/80 border-t pt-8 md:grid-cols-2">
+            <PagerCard
+              direction="上一页"
+              doc={previous}
+              className={!previous ? 'pointer-events-none opacity-40' : ''}
+            />
+            <PagerCard
+              direction="下一页"
+              doc={next}
+              align="right"
+              className={!next ? 'pointer-events-none opacity-40' : ''}
+            />
+          </footer>
+
+          {doc.toc.length > 0 ? (
+            <div className="rounded-2xl border border-border/80 bg-card/60 p-5 md:hidden">
+              <p className="font-medium text-sm">本页目录</p>
+              <nav className="mt-4 flex flex-col gap-2">
+                {doc.toc.map(item => (
+                  <Link
+                    key={item.id}
+                    href={`#${item.id}`}
+                    className="rounded-md px-3 py-2 text-muted-foreground text-sm transition-colors hover:bg-accent hover:text-foreground"
+                  >
+                    {item.label}
+                  </Link>
+                ))}
+              </nav>
+            </div>
+          ) : null}
+        </article>
+      </main>
+
+      <aside className={cn('hidden md:block', shellTopOffset)}>
+        <div className="docs-scrollbar h-full overflow-y-auto border-border/80 border-l pl-6">
+          <DocsTableOfContents items={doc.toc} />
+        </div>
+      </aside>
     </div>
   )
 }
@@ -134,7 +105,7 @@ function DocsMobileSidebar({ currentHref }: { currentHref: string }) {
             <div className="flex flex-col gap-6 pb-1">
               {docsNavigation.map(section => (
                 <div key={section.title} className="flex flex-col gap-2">
-                  <p className="font-medium text-muted-foreground text-xs uppercase tracking-[0.18em]">
+                  <p className="font-semibold text-foreground/80 text-sm uppercase tracking-[0.18em]">
                     {section.title}
                   </p>
                   <div className="flex flex-col gap-1">
