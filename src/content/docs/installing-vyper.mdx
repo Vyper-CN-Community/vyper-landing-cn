@@ -13,7 +13,7 @@
 | CI / 一次性编译环境 | Docker | 不依赖宿主机 Python 细节。 |
 
 <Callout title="前置条件">
-  `refer/docs/installing-vyper.rst` 明确要求 Python 3.11 或更高版本。开始安装前先执行
+  Vyper 目前要求 Python 3.11 或更高版本。开始安装前先执行
   `python3 --version`，不要等到依赖编译失败后再回头排查版本问题。
 </Callout>
 
@@ -68,7 +68,7 @@ docker pull vyperlang/vyper
 docker run -v $(pwd):/code vyperlang/vyper /code/Counter.vy
 ```
 
-除此之外，`refer/docs/installing-vyper.rst` 还提到了这些选择：
+除此之外，还可以考虑这些安装选择：
 
 - GitHub Releases 提供预编译二进制。
 - Nix 用户可以直接通过 `nixpkgs` 安装。
