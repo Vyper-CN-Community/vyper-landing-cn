@@ -1,33 +1,11 @@
 'use client'
 
 import { Check, Copy } from 'lucide-react'
+import { AnimatePresence, motion } from 'motion/react'
 import { useEffect, useRef, useState } from 'react'
 import { toast } from 'sonner'
 import { Button } from '@/ui/shadcn/button'
-
-async function copyText(value: string) {
-  if (navigator.clipboard?.writeText) {
-    await navigator.clipboard.writeText(value)
-    return
-  }
-
-  const textArea = document.createElement('textarea')
-  textArea.value = value
-  textArea.setAttribute('readonly', '')
-  textArea.style.position = 'absolute'
-  textArea.style.left = '-9999px'
-
-  document.body.append(textArea)
-  textArea.select()
-
-  const copied = document.execCommand('copy')
-
-  textArea.remove()
-
-  if (!copied) {
-    throw new Error('copy_failed')
-  }
-}
+import { copyToClipboard } from '@/ui/shadcn/copy-button'
 
 export function CopyCodeButton() {
   const [copied, setCopied] = useState(false)
@@ -52,7 +30,7 @@ export function CopyCodeButton() {
     }
 
     try {
-      await copyText(value)
+      await copyToClipboard(value)
       setCopied(true)
 
       if (resetTimerRef.current !== null) {
@@ -76,8 +54,33 @@ export function CopyCodeButton() {
       aria-label={copied ? '代码已复制' : '复制代码'}
       className="h-8 rounded-md px-2 font-medium text-muted-foreground text-xs hover:text-foreground"
     >
-      {copied ? <Check className="size-3.5" /> : <Copy className="size-3.5" />}
-      {copied ? '已复制' : '复制'}
+      <AnimatePresence mode="wait" initial={false}>
+        {copied ? (
+          <motion.span
+            key="check"
+            initial={{ scale: 0.5, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            exit={{ scale: 0.5, opacity: 0 }}
+            transition={{ type: 'spring', duration: 0.25, bounce: 0.2 }}
+            className="inline-flex items-center gap-1"
+          >
+            <Check className="size-3.5" />
+            已复制
+          </motion.span>
+        ) : (
+          <motion.span
+            key="copy"
+            initial={{ scale: 0.5, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            exit={{ scale: 0.5, opacity: 0 }}
+            transition={{ type: 'spring', duration: 0.25, bounce: 0.2 }}
+            className="inline-flex items-center gap-1"
+          >
+            <Copy className="size-3.5" />
+            复制
+          </motion.span>
+        )}
+      </AnimatePresence>
     </Button>
   )
 }
