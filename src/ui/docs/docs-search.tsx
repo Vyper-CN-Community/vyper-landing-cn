@@ -3,7 +3,7 @@
 import type { DocSearchEntry } from '@/content/docs/search-types'
 import { FileText, Hash, Search } from 'lucide-react'
 import { usePathname, useRouter } from 'next/navigation'
-import { useDeferredValue, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from 'react'
 import {
   CommandDialog,
   CommandEmpty,
@@ -158,7 +158,27 @@ function useShortcutLabel() {
   return shortcutLabel
 }
 
-export function DocsSearch({ entries }: { entries: DocSearchEntry[] }) {
+function useSearchEntries() {
+  const [entries, setEntries] = useState<DocSearchEntry[]>([])
+  const fetchedRef = useRef(false)
+
+  const load = useCallback(() => {
+    if (fetchedRef.current) {
+      return
+    }
+    fetchedRef.current = true
+    fetch('/docs/search-entries.json')
+      .then(res => res.json() as Promise<DocSearchEntry[]>)
+      .then(setEntries)
+      .catch(() => {
+        fetchedRef.current = false
+      })
+  }, [])
+
+  return { entries, load }
+}
+
+export function DocsSearch() {
   const router = useRouter()
   const pathname = usePathname()
   const triggerButtonRef = useRef<HTMLButtonElement>(null)
@@ -167,6 +187,7 @@ export function DocsSearch({ entries }: { entries: DocSearchEntry[] }) {
   const [isOpen, setIsOpen] = useState(false)
   const deferredQuery = useDeferredValue(query)
   const shortcutLabel = useShortcutLabel()
+  const { entries, load: loadSearchEntries } = useSearchEntries()
 
   const preparedEntries = useMemo(
     () =>
@@ -305,6 +326,7 @@ export function DocsSearch({ entries }: { entries: DocSearchEntry[] }) {
     const handleKeyDown = (event: KeyboardEvent) => {
       if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'k') {
         event.preventDefault()
+        loadSearchEntries()
         setIsOpen(true)
       }
     }
@@ -314,7 +336,7 @@ export function DocsSearch({ entries }: { entries: DocSearchEntry[] }) {
     return () => {
       document.removeEventListener('keydown', handleKeyDown)
     }
-  }, [])
+  }, [loadSearchEntries])
 
   useEffect(() => {
     if (!isOpen) {
@@ -341,6 +363,7 @@ export function DocsSearch({ entries }: { entries: DocSearchEntry[] }) {
           type="button"
           aria-label="搜索 Vyper 文档"
           onClick={() => {
+            loadSearchEntries()
             setIsOpen(true)
           }}
           className="inline-flex min-w-24 items-center justify-center gap-2 rounded-md px-3 py-2 text-muted-foreground transition-colors hover:bg-accent hover:text-[#9f4cf2] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#9f4cf2]/30 sm:min-w-0 sm:px-2.5 sm:py-1.5"

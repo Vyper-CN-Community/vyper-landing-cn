@@ -30,12 +30,12 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   return createDocMetadata(doc)
 }
 
+export const dynamicParams = false
+
 export function generateStaticParams() {
-  return docs
-    .filter(doc => doc.slug)
-    .map(doc => ({
-      slug: doc.slug.split('/'),
-    }))
+  return docs.map(doc => ({
+    slug: doc.slug ? doc.slug.split('/') : [],
+  }))
 }
 
 export default async function DocsPage({ params }: PageProps) {

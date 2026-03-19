@@ -1,6 +1,5 @@
 'use client'
 
-import type { DocSearchEntry } from '@/content/docs/search-types'
 import { Github } from 'lucide-react'
 import { AnimatePresence, motion } from 'motion/react'
 import Link from 'next/link'
@@ -49,13 +48,7 @@ const titleVariants = {
   }),
 }
 
-export function DocsHeader({
-  docs,
-  searchEntries,
-}: {
-  docs: DocsHeaderEntry[]
-  searchEntries: DocSearchEntry[]
-}) {
+export function DocsHeader({ docs }: { docs: DocsHeaderEntry[] }) {
   const pathname = normalizePathname(usePathname())
   const currentIndex = docs.findIndex(doc => doc.href === pathname)
   const resolvedIndex = currentIndex === -1 ? 0 : currentIndex
@@ -105,7 +98,7 @@ export function DocsHeader({
           </div>
         </div>
         <div className="flex w-full justify-center md:w-auto md:flex-none">
-          <DocsSearch entries={searchEntries} />
+          <DocsSearch />
         </div>
         <div className="hidden items-center gap-2 md:flex">
           <Link
