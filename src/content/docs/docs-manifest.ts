@@ -1,49 +1,9 @@
-import type { ComponentType } from 'react'
-import BuiltInsContent from './built-ins.mdx'
-import CompilerExceptionsContent from './compiler-exceptions.mdx'
-import CompilingContent from './compiling.mdx'
-import ConstantsAndVarsContent from './constants-and-vars.mdx'
-import ContractStructureContent from './contract-structure.mdx'
-import ContributingContent from './contributing.mdx'
-import ControlStructuresContent from './control-structures.mdx'
-import DeployingContractsContent from './deploying-contracts.mdx'
-import DesignTradeoffsContent from './design-tradeoffs.mdx'
-import EventLoggingContent from './event-logging.mdx'
-import BlindAuctionContent from './examples/blind-auction.mdx'
-import CompanyStockContent from './examples/company-stock.mdx'
-import CrowdfundContent from './examples/crowdfund.mdx'
-import ERC20Content from './examples/erc20.mdx'
-import ERC721Content from './examples/erc721.mdx'
-import ERC1155Content from './examples/erc1155.mdx'
-import ERC4626Content from './examples/erc4626.mdx'
-import FactoryContent from './examples/factory.mdx'
-import MarketMakerContent from './examples/market-maker.mdx'
-import NameRegistryContent from './examples/name-registry.mdx'
-import SafeRemotePurchaseContent from './examples/safe-remote-purchase.mdx'
-import SimpleAuctionContent from './examples/simple-auction.mdx'
-import StorageContent from './examples/storage.mdx'
-import VotingContent from './examples/voting.mdx'
-import WalletContent from './examples/wallet.mdx'
-import InstallingVyperContent from './installing-vyper.mdx'
-import InterfacesContent from './interfaces.mdx'
-import ModulesContent from './modules.mdx'
-import NatSpecContent from './natspec.mdx'
-import OverviewContent from './overview.mdx'
-import QuickstartContent from './quickstart.mdx'
-import ReleaseNotesContent from './release-notes.mdx'
-import ResourcesContent from './resources.mdx'
-import ScopingAndDeclarationsContent from './scoping-and-declarations.mdx'
-import StatementsContent from './statements.mdx'
-import TestingContractsContent from './testing-contracts.mdx'
-import TypesContent from './types.mdx'
-import VersioningContent from './versioning.mdx'
-
 export type DocTocItem = {
   id: string
   label: string
 }
 
-export type DocPage = {
+export type DocManifest = {
   slug: string
   href: string
   title: string
@@ -51,8 +11,9 @@ export type DocPage = {
   group: string
   order: number
   toc: DocTocItem[]
-  Content: ComponentType
 }
+
+export type DocSlug = DocManifest['slug']
 
 const docPages = [
   {
@@ -68,7 +29,6 @@ const docPages = [
       { id: 'core-principles', label: '核心设计原则' },
       { id: 'documentation-map', label: '文档地图' },
     ],
-    Content: OverviewContent,
   },
   {
     slug: 'installing-vyper',
@@ -83,7 +43,6 @@ const docPages = [
       { id: 'python-project', label: 'Python 项目内安装' },
       { id: 'containers', label: 'Docker 与其他选项' },
     ],
-    Content: InstallingVyperContent,
   },
   {
     slug: 'quickstart',
@@ -98,7 +57,6 @@ const docPages = [
       { id: 'first-contract', label: '第一个合约' },
       { id: 'compile-and-test', label: '编译与测试' },
     ],
-    Content: QuickstartContent,
   },
   {
     slug: 'contract-structure',
@@ -113,7 +71,6 @@ const docPages = [
       { id: 'state-and-functions', label: '状态与函数' },
       { id: 'events-and-interfaces', label: '事件与接口' },
     ],
-    Content: ContractStructureContent,
   },
   {
     slug: 'types',
@@ -128,7 +85,6 @@ const docPages = [
       { id: 'collections', label: '集合类型' },
       { id: 'conversion-rules', label: '转换规则' },
     ],
-    Content: TypesContent,
   },
   {
     slug: 'constants-and-vars',
@@ -143,7 +99,6 @@ const docPages = [
       { id: 'custom-constants', label: '自定义常量' },
       { id: 'practical-guidelines', label: '使用建议' },
     ],
-    Content: ConstantsAndVarsContent,
   },
   {
     slug: 'statements',
@@ -158,7 +113,6 @@ const docPages = [
       { id: 'exceptions', label: '异常机制' },
       { id: 'assert-and-raise', label: 'assert 与 raise' },
     ],
-    Content: StatementsContent,
   },
   {
     slug: 'control-structures',
@@ -173,7 +127,6 @@ const docPages = [
       { id: 'constructor', label: '重入保护与装饰器' },
       { id: 'loops-and-guards', label: '循环与控制流' },
     ],
-    Content: ControlStructuresContent,
   },
   {
     slug: 'scoping-and-declarations',
@@ -188,7 +141,6 @@ const docPages = [
       { id: 'storage-layout', label: '存储布局' },
       { id: 'scoping-rules', label: '作用域规则' },
     ],
-    Content: ScopingAndDeclarationsContent,
   },
   {
     slug: 'built-ins',
@@ -203,7 +155,6 @@ const docPages = [
       { id: 'low-level-calls', label: '低层调用' },
       { id: 'safety-checklist', label: '使用清单' },
     ],
-    Content: BuiltInsContent,
   },
   {
     slug: 'modules',
@@ -218,7 +169,6 @@ const docPages = [
       { id: 'uses-and-dependencies', label: 'uses 与依赖' },
       { id: 'exports', label: '导出外部接口' },
     ],
-    Content: ModulesContent,
   },
   {
     slug: 'interfaces',
@@ -233,7 +183,6 @@ const docPages = [
       { id: 'implementing-interfaces', label: '实现接口' },
       { id: 'standalone-and-extraction', label: '独立接口与导出' },
     ],
-    Content: InterfacesContent,
   },
   {
     slug: 'event-logging',
@@ -248,7 +197,6 @@ const docPages = [
       { id: 'logging-events', label: '写入事件' },
       { id: 'listening-for-events', label: '监听事件' },
     ],
-    Content: EventLoggingContent,
   },
   {
     slug: 'natspec',
@@ -262,7 +210,6 @@ const docPages = [
       { id: 'tags', label: '标签说明' },
       { id: 'documentation-output', label: '文档输出' },
     ],
-    Content: NatSpecContent,
   },
   {
     slug: 'compiling',
@@ -277,7 +224,6 @@ const docPages = [
       { id: 'json-interface', label: 'JSON 接口' },
       { id: 'compiler-settings', label: '编译设置' },
     ],
-    Content: CompilingContent,
   },
   {
     slug: 'compiler-exceptions',
@@ -290,7 +236,6 @@ const docPages = [
       { id: 'common-exceptions', label: '常见编译异常' },
       { id: 'compiler-panic', label: 'CompilerPanic' },
     ],
-    Content: CompilerExceptionsContent,
   },
   {
     slug: 'deploying-contracts',
@@ -303,7 +248,6 @@ const docPages = [
       { id: 'deployment-options', label: '部署方式' },
       { id: 'practical-guidelines', label: '实践建议' },
     ],
-    Content: DeployingContractsContent,
   },
   {
     slug: 'testing-contracts',
@@ -318,7 +262,6 @@ const docPages = [
       { id: 'moccasin', label: 'Moccasin' },
       { id: 'selection-guidance', label: '如何选择' },
     ],
-    Content: TestingContractsContent,
   },
   {
     slug: 'design-tradeoffs',
@@ -333,7 +276,6 @@ const docPages = [
       { id: 'style-guidelines', label: '语法对照与风格建议' },
       { id: 'documentation-habits', label: '编码风格与文档习惯' },
     ],
-    Content: DesignTradeoffsContent,
   },
   {
     slug: 'resources',
@@ -349,7 +291,6 @@ const docPages = [
       { id: 'presentations', label: '会议与演讲' },
       { id: 'unmaintained', label: '维护状态较弱的资源' },
     ],
-    Content: ResourcesContent,
   },
   {
     slug: 'contributing',
@@ -364,7 +305,6 @@ const docPages = [
       { id: 'reporting-issues', label: '报告问题' },
       { id: 'pull-request-workflow', label: 'Pull Request 工作流' },
     ],
-    Content: ContributingContent,
   },
   {
     slug: 'versioning',
@@ -379,7 +319,6 @@ const docPages = [
       { id: 'security-and-prereleases', label: '安全与预发布版本' },
       { id: 'communication', label: 'PR 与发布沟通' },
     ],
-    Content: VersioningContent,
   },
   {
     slug: 'release-notes',
@@ -394,7 +333,6 @@ const docPages = [
       { id: 'v0-4-1', label: 'v0.4.1' },
       { id: 'v0-4-0', label: 'v0.4.0' },
     ],
-    Content: ReleaseNotesContent,
   },
   {
     slug: 'examples/simple-auction',
@@ -408,7 +346,6 @@ const docPages = [
       { id: 'contract-code', label: '完整合约代码' },
       { id: 'walkthrough', label: '代码解析' },
     ],
-    Content: SimpleAuctionContent,
   },
   {
     slug: 'examples/blind-auction',
@@ -422,7 +359,6 @@ const docPages = [
       { id: 'contract-code', label: '完整合约代码' },
       { id: 'walkthrough', label: '代码解析' },
     ],
-    Content: BlindAuctionContent,
   },
   {
     slug: 'examples/safe-remote-purchase',
@@ -436,7 +372,6 @@ const docPages = [
       { id: 'contract-code', label: '完整合约代码' },
       { id: 'walkthrough', label: '代码解析' },
     ],
-    Content: SafeRemotePurchaseContent,
   },
   {
     slug: 'examples/crowdfund',
@@ -450,7 +385,6 @@ const docPages = [
       { id: 'contract-code', label: '完整合约代码' },
       { id: 'walkthrough', label: '代码解析' },
     ],
-    Content: CrowdfundContent,
   },
   {
     slug: 'examples/voting',
@@ -464,7 +398,6 @@ const docPages = [
       { id: 'contract-code', label: '完整合约代码' },
       { id: 'walkthrough', label: '代码解析' },
     ],
-    Content: VotingContent,
   },
   {
     slug: 'examples/company-stock',
@@ -478,7 +411,6 @@ const docPages = [
       { id: 'contract-code', label: '完整合约代码' },
       { id: 'walkthrough', label: '代码解析' },
     ],
-    Content: CompanyStockContent,
   },
   {
     slug: 'examples/storage',
@@ -492,7 +424,6 @@ const docPages = [
       { id: 'contract-code', label: '完整合约代码' },
       { id: 'walkthrough', label: '代码解析' },
     ],
-    Content: StorageContent,
   },
   {
     slug: 'examples/name-registry',
@@ -506,7 +437,6 @@ const docPages = [
       { id: 'contract-code', label: '完整合约代码' },
       { id: 'walkthrough', label: '代码解析' },
     ],
-    Content: NameRegistryContent,
   },
   {
     slug: 'examples/erc20',
@@ -520,7 +450,6 @@ const docPages = [
       { id: 'contract-code', label: '完整合约代码' },
       { id: 'walkthrough', label: '代码解析' },
     ],
-    Content: ERC20Content,
   },
   {
     slug: 'examples/erc721',
@@ -534,7 +463,6 @@ const docPages = [
       { id: 'contract-code', label: '核心结构' },
       { id: 'walkthrough', label: '代码解析' },
     ],
-    Content: ERC721Content,
   },
   {
     slug: 'examples/erc1155',
@@ -548,7 +476,6 @@ const docPages = [
       { id: 'contract-code', label: '核心结构' },
       { id: 'walkthrough', label: '代码解析' },
     ],
-    Content: ERC1155Content,
   },
   {
     slug: 'examples/erc4626',
@@ -562,7 +489,6 @@ const docPages = [
       { id: 'contract-code', label: '核心结构' },
       { id: 'walkthrough', label: '代码解析' },
     ],
-    Content: ERC4626Content,
   },
   {
     slug: 'examples/market-maker',
@@ -576,7 +502,6 @@ const docPages = [
       { id: 'contract-code', label: '完整合约代码' },
       { id: 'walkthrough', label: '代码解析' },
     ],
-    Content: MarketMakerContent,
   },
   {
     slug: 'examples/factory',
@@ -590,7 +515,6 @@ const docPages = [
       { id: 'contract-code', label: 'Factory 合约代码' },
       { id: 'walkthrough', label: '代码解析' },
     ],
-    Content: FactoryContent,
   },
   {
     slug: 'examples/wallet',
@@ -604,9 +528,8 @@ const docPages = [
       { id: 'contract-code', label: '完整合约代码' },
       { id: 'walkthrough', label: '代码解析' },
     ],
-    Content: WalletContent,
   },
-] satisfies DocPage[]
+] satisfies DocManifest[]
 
 const navigationGroups = ['概览', '入门', '语言基础', '进阶', '工具与规范', '资源', '示例'] as const
 
@@ -617,8 +540,12 @@ export const docsNavigation = navigationGroups.map(title => ({
   items: docs.filter(doc => doc.group === title),
 }))
 
+function normalizeDocSlug(slug?: string) {
+  return slug ?? ''
+}
+
 export function getDocSourcePath(slug?: string) {
-  const normalizedSlug = slug ?? ''
+  const normalizedSlug = normalizeDocSlug(slug)
 
   if (normalizedSlug === '') {
     return 'src/content/docs/overview.mdx'
@@ -633,7 +560,7 @@ export function getDocEditHref(slug?: string) {
 }
 
 export function getDocBySlug(slug?: string) {
-  const normalizedSlug = slug ?? ''
+  const normalizedSlug = normalizeDocSlug(slug)
   return docs.find(doc => doc.slug === normalizedSlug)
 }
 

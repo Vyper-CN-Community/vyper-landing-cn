@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 import { notFound } from 'next/navigation'
-import { docs, getDocBySlug } from '@/content/docs/registry'
+import { getDocContentBySlug } from '@/content/docs/docs-content'
+import { docs, getDocBySlug } from '@/content/docs/docs-manifest'
 import { createDocMetadata } from '@/lib/seo/metadata-builders'
 import { DocsShell } from '@/ui/docs/docs-shell'
 
@@ -31,6 +32,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 }
 
 export const dynamicParams = false
+export const dynamic = 'force-static'
 
 export function generateStaticParams() {
   return docs.map(doc => ({
@@ -47,5 +49,11 @@ export default async function DocsPage({ params }: PageProps) {
     notFound()
   }
 
-  return <DocsShell doc={doc} />
+  const Content = await getDocContentBySlug(doc.slug)
+
+  if (!Content) {
+    notFound()
+  }
+
+  return <DocsShell doc={doc} Content={Content} />
 }

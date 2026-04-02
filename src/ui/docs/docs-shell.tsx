@@ -1,11 +1,11 @@
-import type { ComponentPropsWithoutRef, ReactNode } from 'react'
+import type { ComponentPropsWithoutRef, ComponentType, ReactNode } from 'react'
 import Link from 'next/link'
 import {
-  type DocPage,
+  type DocManifest,
   docsNavigation,
   getAdjacentDocs,
   getDocEditHref,
-} from '@/content/docs/registry'
+} from '@/content/docs/docs-manifest'
 import { cn } from '@/lib/utils/shadcn'
 import { DocsSidebar } from '@/ui/docs/docs-sidebar'
 import { DocsTableOfContents } from '@/ui/docs/docs-table-of-contents'
@@ -21,9 +21,10 @@ const docsSidebarSections = docsNavigation.map(section => ({
   })),
 }))
 
-export function DocsShell({ doc }: { doc: DocPage }) {
+type DocContentComponent = ComponentType<Record<string, unknown>>
+
+export function DocsShell({ doc, Content }: { doc: DocManifest; Content: DocContentComponent }) {
   const { previous, next } = getAdjacentDocs(doc.slug)
-  const Content = doc.Content
   const editHref = getDocEditHref(doc.slug)
 
   return (
@@ -161,7 +162,7 @@ function PagerCard({
   className,
 }: {
   direction: string
-  doc?: DocPage
+  doc?: DocManifest
   align?: 'right'
   className?: string
 }) {

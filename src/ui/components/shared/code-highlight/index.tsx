@@ -1,23 +1,73 @@
-import type { FC } from 'react'
-import { codeToHtml } from 'shiki'
+import { cache } from 'react'
+import { getSingletonHighlighter } from 'shiki'
 import { cn } from '@/lib/utils/shadcn'
 import { CopyCodeButton } from './copy-code-button'
 
-export const CodeHighlight: FC<{
+const codeHighlightThemes = {
+  light: 'github-light',
+  dark: 'github-dark-high-contrast',
+} as const
+
+type ShikiHighlighter = Awaited<ReturnType<typeof getSingletonHighlighter>>
+type CodeHighlightLanguage = Parameters<ShikiHighlighter['loadLanguage']>[number]
+type CodeToHtmlLanguage = Parameters<ShikiHighlighter['codeToHtml']>[1]['lang']
+
+const commonCodeLanguages = [
+  'bash',
+  'javascript',
+  'json',
+  'python',
+  'solidity',
+  'text',
+  'vyper',
+] satisfies CodeHighlightLanguage[]
+
+const getCodeHighlighter = cache(async () => {
+  const highlighter = await getSingletonHighlighter({
+    themes: [codeHighlightThemes.light, codeHighlightThemes.dark],
+  })
+
+  await highlighter.loadLanguage(...commonCodeLanguages)
+
+  return highlighter
+})
+
+const renderHighlightedCode = cache(async (code: string, lang: string) => {
+  const highlighter = await getCodeHighlighter()
+
+  try {
+    await highlighter.loadLanguage(lang as CodeHighlightLanguage)
+
+    return await highlighter.codeToHtml(code, {
+      lang: lang as CodeToHtmlLanguage,
+      themes: codeHighlightThemes,
+      defaultColor: false,
+    })
+  } catch {
+    return highlighter.codeToHtml(code, {
+      lang: 'text' as CodeToHtmlLanguage,
+      themes: codeHighlightThemes,
+      defaultColor: false,
+    })
+  }
+})
+
+type CodeHighlightProps = {
   code: string
   lang: string
   className?: string
   showToolbar?: boolean
   embedded?: boolean
-}> = async ({ code, lang, className, showToolbar = true, embedded = false }) => {
-  const html = await codeToHtml(code, {
-    lang,
-    themes: {
-      light: 'github-light',
-      dark: 'github-dark-high-contrast',
-    },
-    defaultColor: false,
-  })
+}
+
+export async function CodeHighlight({
+  code,
+  lang,
+  className,
+  showToolbar = true,
+  embedded = false,
+}: CodeHighlightProps) {
+  const html = await renderHighlightedCode(code, lang)
 
   return (
     <div

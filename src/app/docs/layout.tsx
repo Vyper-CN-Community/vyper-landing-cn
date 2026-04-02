@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react'
-import { docs } from '@/content/docs/registry'
+import { docs } from '@/content/docs/docs-manifest'
 import { DocsHeader } from '@/ui/docs/docs-header'
 
 const docsHeaderEntries = docs.map(doc => ({
