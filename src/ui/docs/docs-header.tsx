@@ -1,6 +1,5 @@
 'use client'
 
-import { Github } from 'lucide-react'
 import { AnimatePresence, motion } from 'motion/react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
@@ -8,6 +7,7 @@ import { memo, useEffect, useRef } from 'react'
 import { VyperLogo } from '@/ui/components/shared/vyper-logo'
 import { DocsSearch } from '@/ui/docs/docs-search'
 import { SwitchTheme } from '@/ui/shadcn/switch-theme'
+import { GitHubIcon } from '@/ui/svgs/github'
 
 type DocsHeaderEntry = {
   href: string
@@ -92,7 +92,7 @@ export function DocsHeader({ docs }: { docs: DocsHeaderEntry[] }) {
               aria-label="查看 GitHub 仓库"
               className="inline-flex size-9 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
             >
-              <Github className="size-4.5" />
+              <GitHubIcon className="size-4.5" />
             </Link>
             <SwitchTheme aria-label="切换主题" />
           </div>
@@ -108,7 +108,7 @@ export function DocsHeader({ docs }: { docs: DocsHeaderEntry[] }) {
             aria-label="查看 GitHub 仓库"
             className="inline-flex size-9 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
           >
-            <Github className="size-4.5" />
+            <GitHubIcon className="size-4.5" />
           </Link>
           <SwitchTheme aria-label="切换主题" />
         </div>

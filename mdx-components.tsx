@@ -4,7 +4,6 @@ import Link from 'next/link'
 import { isValidElement } from 'react'
 import { cn } from '@/lib/utils/shadcn'
 import { CodeHighlight } from '@/ui/components/shared/code-highlight'
-import { SourceCode } from '@/ui/docs/source-code'
 
 function Lead({ className, ...props }: ComponentPropsWithoutRef<'div'>) {
   return (
@@ -225,7 +224,6 @@ export function useMDXComponents(components: MDXComponents): MDXComponents {
     Callout,
     CardGrid,
     DocCard,
-    SourceCode,
     ...components,
   }
 }

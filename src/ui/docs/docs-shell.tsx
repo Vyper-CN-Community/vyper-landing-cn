@@ -1,5 +1,4 @@
 import type { ComponentPropsWithoutRef, ReactNode } from 'react'
-import { Github } from 'lucide-react'
 import Link from 'next/link'
 import {
   type DocPage,
@@ -11,6 +10,7 @@ import { cn } from '@/lib/utils/shadcn'
 import { DocsSidebar } from '@/ui/docs/docs-sidebar'
 import { DocsTableOfContents } from '@/ui/docs/docs-table-of-contents'
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/ui/shadcn/accordion'
+import { GitHubIcon } from '@/ui/svgs/github'
 
 const shellTopOffset = 'sticky top-14 self-start h-[calc(100vh-3.5rem)]'
 const docsSidebarSections = docsNavigation.map(section => ({
@@ -64,7 +64,7 @@ export function DocsShell({ doc }: { doc: DocPage }) {
               rel="noreferrer"
               className="inline-flex items-center gap-2 rounded-lg text-muted-foreground text-sm transition-colors hover:text-foreground"
             >
-              <Github className="size-4" />
+              <GitHubIcon className="size-4" />
               <span>在 GitHub 上编辑此页</span>
             </a>
           </div>

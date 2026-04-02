@@ -3,7 +3,7 @@ import 'server-only'
 import type { DocSearchEntry } from '@/content/docs/search-types'
 import { readFileSync } from 'node:fs'
 import path from 'node:path'
-import { type DocPage, docs, getDocSourcePath } from '@/content/docs/registry'
+import { type DocPage, docs } from '@/content/docs/registry'
 
 function stripMdx(source: string) {
   return source
@@ -30,7 +30,8 @@ function stripMdx(source: string) {
 }
 
 function readDocSource(slug?: string) {
-  const sourcePath = path.join(process.cwd(), getDocSourcePath(slug))
+  const normalizedSlug = slug || 'overview'
+  const sourcePath = path.join(process.cwd(), 'src', 'content', 'docs', `${normalizedSlug}.mdx`)
   return readFileSync(sourcePath, 'utf8')
 }
 
