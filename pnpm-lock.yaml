@@ -96,8 +96,8 @@ importers:
         specifier: ^4.0.2
         version: 4.0.2
       simple-icons:
-        specifier: ^16.14.0
-        version: 16.14.0
+        specifier: ^16.15.0
+        version: 16.15.0
       sonner:
         specifier: ^2.0.7
         version: 2.0.7(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
@@ -2870,8 +2870,8 @@ packages:
     resolution: {integrity: sha512-bzyZ1e88w9O1iNJbKnOlvYTrWPDl46O1bG0D3XInv+9tkPrxrN8jUUTiFlDkkmKWgn1M6CfIA13SuGqOa9Korw==}
     engines: {node: '>=14'}
 
-  simple-icons@16.14.0:
-    resolution: {integrity: sha512-2Nvs3jJpCfMWQerD4zdv91g/MpnWn81a7uhyAC0reuhrjmS2MtSmwIKwewOJR6Xe97ZmfltDntCDqKJIBawQOw==}
+  simple-icons@16.15.0:
+    resolution: {integrity: sha512-hOyY4Cdvh1D/FJa1Qx4nTvypCT2BoI3jpc4xjxVgwVh1Hmd9mnqBqBTziDytCj2f5UOAXCfdnwODiNv710aqkQ==}
     engines: {node: '>=0.12.18'}
 
   slice-ansi@7.1.2:
@@ -6279,7 +6279,7 @@ snapshots:
 
   signal-exit@4.1.0: {}
 
-  simple-icons@16.14.0: {}
+  simple-icons@16.15.0: {}
 
   slice-ansi@7.1.2:
     dependencies:
