@@ -37,7 +37,7 @@
     "immer": "^11.1.4",
     "jotai": "^2.19.1",
     "ky": "^2.0.0",
-    "lucide-react": "^1.7.0",
+    "lucide-react": "^1.8.0",
     "motion": "^12.38.0",
     "next": "16.2.4",
     "next-sitemap": "^4.2.3",
