@@ -134,6 +134,7 @@ function DocsMobileSidebar({ currentHref }: { currentHref: string }) {
                       <Link
                         key={item.href}
                         href={item.href}
+                        prefetch
                         className={cn(
                           'rounded-xl px-3 py-2.5 text-sm transition-colors',
                           currentHref === item.href
@@ -200,7 +201,7 @@ function PagerCard({
   }
 
   return (
-    <Link href={doc.href} className={cn(classes, className)}>
+    <Link href={doc.href} prefetch className={cn(classes, className)}>
       {content}
     </Link>
   )

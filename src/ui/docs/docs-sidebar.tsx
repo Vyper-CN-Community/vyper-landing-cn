@@ -2,7 +2,7 @@
 
 import { motion } from 'motion/react'
 import Link from 'next/link'
-import { useEffect, useLayoutEffect, useRef } from 'react'
+import { useEffect, useRef } from 'react'
 import { cn } from '@/lib/utils/shadcn'
 
 const sidebarScrollStorageKey = 'docs-sidebar-scroll-top'
@@ -40,15 +40,15 @@ export function DocsSidebar({
 }) {
   const containerRef = useRef<HTMLDivElement>(null)
 
-  useLayoutEffect(() => {
+  useEffect(() => {
     const container = containerRef.current
 
-    if (!container || !currentHref) {
+    if (!container) {
       return
     }
 
     container.scrollTop = readSavedScrollTop()
-  }, [currentHref])
+  }, [])
 
   useEffect(() => {
     const container = containerRef.current
@@ -96,6 +96,7 @@ export function DocsSidebar({
                   <Link
                     key={item.href}
                     href={item.href}
+                    prefetch
                     onClick={persistScrollPosition}
                     aria-current={currentHref === item.href ? 'page' : undefined}
                     className={cn(
