@@ -46,7 +46,7 @@ export const VyperVsSolidityClient: FC<{
             <div className="flex flex-row gap-1 overflow-x-auto pb-2 [-ms-overflow-style:none] [scrollbar-width:none] lg:w-72 lg:shrink-0 lg:flex-col lg:pb-0 [&::-webkit-scrollbar]:hidden">
               {items.map((item, index) => (
                 <button
-                  key={index}
+                  key={item.title}
                   type="button"
                   onClick={() => setActiveIndex(index)}
                   className={cn(

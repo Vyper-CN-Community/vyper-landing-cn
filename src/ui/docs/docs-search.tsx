@@ -97,22 +97,19 @@ function renderHighlightedText(text: string, matchers: HighlightMatcher[]) {
   const parts: Array<string | React.JSX.Element> = []
   let cursor = 0
 
-  ranges.forEach(([start, end], index) => {
+  for (const [start, end] of ranges) {
     if (cursor < start) {
       parts.push(text.slice(cursor, start))
     }
 
     parts.push(
-      <mark
-        key={`${start}-${end}-${index}`}
-        className="rounded-sm bg-[#9f4cf2]/12 px-1 text-[#9f4cf2]"
-      >
+      <mark key={`${start}-${end}`} className="rounded-sm bg-[#9f4cf2]/12 px-1 text-[#9f4cf2]">
         {text.slice(start, end)}
       </mark>,
     )
 
     cursor = end
-  })
+  }
 
   if (cursor < text.length) {
     parts.push(text.slice(cursor))

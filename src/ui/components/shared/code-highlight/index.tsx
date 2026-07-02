@@ -1,3 +1,4 @@
+import type { CSSProperties } from 'react'
 import { cache } from 'react'
 import { getSingletonHighlighter } from 'shiki'
 import { cn } from '@/lib/utils/shadcn'
@@ -10,7 +11,7 @@ const codeHighlightThemes = {
 
 type ShikiHighlighter = Awaited<ReturnType<typeof getSingletonHighlighter>>
 type CodeHighlightLanguage = Parameters<ShikiHighlighter['loadLanguage']>[number]
-type CodeToHtmlLanguage = Parameters<ShikiHighlighter['codeToHtml']>[1]['lang']
+type CodeToTokensLanguage = Parameters<ShikiHighlighter['codeToTokens']>[1]['lang']
 
 const commonCodeLanguages = [
   'bash',
@@ -32,32 +33,34 @@ const getCodeHighlighter = cache(async () => {
   return highlighter
 })
 
-const renderHighlightedCode = cache(async (code: string, lang: string) => {
+const renderHighlightedCode = cache(async (code: string, lang: CodeHighlightLanguage) => {
   const highlighter = await getCodeHighlighter()
 
-  try {
-    await highlighter.loadLanguage(lang as CodeHighlightLanguage)
+  await highlighter.loadLanguage(lang)
 
-    return await highlighter.codeToHtml(code, {
-      lang: lang as CodeToHtmlLanguage,
-      themes: codeHighlightThemes,
-      defaultColor: false,
-    })
-  } catch {
-    return highlighter.codeToHtml(code, {
-      lang: 'text' as CodeToHtmlLanguage,
-      themes: codeHighlightThemes,
-      defaultColor: false,
-    })
-  }
+  return highlighter.codeToTokens(code, {
+    lang: lang as CodeToTokensLanguage,
+    themes: codeHighlightThemes,
+    defaultColor: false,
+  })
 })
 
-type CodeHighlightProps = {
-  code: string
-  lang: string
-  className?: string
-  showToolbar?: boolean
-  embedded?: boolean
+const getStyleValue = (style: string | undefined, property: string) =>
+  style
+    ?.split(';')
+    .find(declaration => declaration.startsWith(`${property}:`))
+    ?.slice(property.length + 1)
+
+const getLineKeys = (code: string) => {
+  const keys: string[] = []
+  let offset = 0
+
+  for (const line of code.split('\n')) {
+    keys.push(String(offset))
+    offset += line.length + 1
+  }
+
+  return keys
 }
 
 export async function CodeHighlight({
@@ -66,8 +69,25 @@ export async function CodeHighlight({
   className,
   showToolbar = true,
   embedded = false,
-}: CodeHighlightProps) {
-  const html = await renderHighlightedCode(code, lang)
+}: {
+  code: string
+  lang: string
+  className?: string
+  showToolbar?: boolean
+  embedded?: boolean
+}) {
+  const { tokens, fg, bg } = await renderHighlightedCode(code, lang as CodeHighlightLanguage)
+  const lineKeys = getLineKeys(code)
+  const highlightedLines = tokens.map((line, lineIndex) => ({
+    key: lineKeys[lineIndex],
+    tokens: line,
+  }))
+  const preStyle = {
+    '--shiki-light': getStyleValue(fg, '--shiki-light'),
+    '--shiki-dark': getStyleValue(fg, '--shiki-dark'),
+    '--shiki-light-bg': getStyleValue(bg, '--shiki-light-bg'),
+    '--shiki-dark-bg': getStyleValue(bg, '--shiki-dark-bg'),
+  } as CSSProperties
 
   return (
     <div
@@ -87,7 +107,20 @@ export async function CodeHighlight({
           <CopyCodeButton />
         </div>
       ) : null}
-      <div dangerouslySetInnerHTML={{ __html: html }} />
+      <pre className="shiki shiki-themes github-light github-dark-high-contrast" style={preStyle}>
+        <code>
+          {highlightedLines.map(line => (
+            <span className="line" key={line.key}>
+              {line.tokens.map(token => (
+                <span key={token.offset} style={token.htmlStyle as CSSProperties}>
+                  {token.content}
+                </span>
+              ))}
+              {line.key === lineKeys.at(-1) ? null : '\n'}
+            </span>
+          ))}
+        </code>
+      </pre>
     </div>
   )
 }

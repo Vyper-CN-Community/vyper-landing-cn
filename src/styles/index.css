@@ -19,13 +19,17 @@
 
   .shiki,
   .shiki span {
+    /* biome-ignore lint/complexity/noImportantStyles: shiki colors must override token inline styles */
     color: var(--shiki-light) !important;
+    /* biome-ignore lint/complexity/noImportantStyles: shiki colors must override token inline styles */
     background-color: var(--shiki-light-bg) !important;
   }
 
   .dark .shiki,
   .dark .shiki span {
+    /* biome-ignore lint/complexity/noImportantStyles: shiki colors must override token inline styles */
     color: var(--shiki-dark) !important;
+    /* biome-ignore lint/complexity/noImportantStyles: shiki colors must override token inline styles */
     background-color: var(--shiki-dark-bg) !important;
   }
 }
